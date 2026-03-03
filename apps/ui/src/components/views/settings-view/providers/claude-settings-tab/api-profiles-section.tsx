@@ -102,6 +102,7 @@ interface ProviderFormData {
   timeoutMs: string; // String for input, convert to number
   models: ModelFormEntry[];
   disableNonessentialTraffic: boolean;
+  claudeCodeExecutablePath: string;
 }
 
 const emptyFormData: ProviderFormData = {
@@ -114,6 +115,7 @@ const emptyFormData: ProviderFormData = {
   timeoutMs: '',
   models: [],
   disableNonessentialTraffic: false,
+  claudeCodeExecutablePath: '',
 };
 
 // Provider types that have fixed settings (no need to show toggles)
@@ -163,6 +165,7 @@ export function ApiProfilesSection() {
           mapsToClaudeModel: m.mapsToClaudeModel || 'sonnet',
         })),
         disableNonessentialTraffic: template.disableNonessentialTraffic ?? false,
+        claudeCodeExecutablePath: '',
       });
       setCurrentTemplate(template);
     } else {
@@ -197,6 +200,7 @@ export function ApiProfilesSection() {
         mapsToClaudeModel: m.mapsToClaudeModel || 'sonnet',
       })),
       disableNonessentialTraffic: provider.disableNonessentialTraffic ?? false,
+      claudeCodeExecutablePath: provider.claudeCodeExecutablePath ?? '',
     });
     setEditingProviderId(provider.id);
     setCurrentTemplate(template ?? null);
@@ -245,6 +249,7 @@ export function ApiProfilesSection() {
       disableNonessentialTraffic: isFixedProvider
         ? true
         : formData.disableNonessentialTraffic || undefined,
+      claudeCodeExecutablePath: formData.claudeCodeExecutablePath.trim() || undefined,
     };
 
     if (editingProviderId) {
@@ -567,6 +572,23 @@ export function ApiProfilesSection() {
                 onChange={(e) => setFormData({ ...formData, timeoutMs: e.target.value })}
                 placeholder="Optional, e.g., 3000000"
               />
+            </div>
+
+            {/* Claude Code Executable Path */}
+            <div className="space-y-2">
+              <Label htmlFor="provider-executable-path">Claude Code Executable Path</Label>
+              <Input
+                id="provider-executable-path"
+                type="text"
+                value={formData.claudeCodeExecutablePath}
+                onChange={(e) =>
+                  setFormData({ ...formData, claudeCodeExecutablePath: e.target.value })
+                }
+                placeholder="/path/to/claude"
+              />
+              <p className="text-xs text-muted-foreground">
+                Leave empty to use the default Claude Code binary.
+              </p>
             </div>
 
             {/* Models */}

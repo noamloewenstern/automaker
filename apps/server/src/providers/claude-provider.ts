@@ -249,6 +249,10 @@ export class ClaudeProvider extends BaseProvider {
       ...(options.agents && { agents: options.agents }),
       // Pass through outputFormat for structured JSON outputs
       ...(options.outputFormat && { outputFormat: options.outputFormat }),
+      // Custom Claude Code executable path from provider config
+      ...(providerConfig?.claudeCodeExecutablePath && {
+        pathToClaudeCodeExecutable: providerConfig.claudeCodeExecutablePath,
+      }),
     };
 
     // Build prompt payload

@@ -221,6 +221,71 @@ describe('claude-provider.ts', () => {
       });
     });
 
+    it('should pass pathToClaudeCodeExecutable when claudeCompatibleProvider has claudeCodeExecutablePath', async () => {
+      vi.mocked(sdk.query).mockReturnValue(
+        (async function* () {
+          yield { type: 'text', text: 'test' };
+        })()
+      );
+
+      const generator = provider.executeQuery({
+        prompt: 'Test',
+        model: 'claude-opus-4-6',
+        cwd: '/test',
+        claudeCompatibleProvider: {
+          id: 'test-provider',
+          name: 'Test Provider',
+          providerType: 'custom',
+          baseUrl: 'https://example.com',
+          apiKeySource: 'inline',
+          apiKey: 'test-key',
+          models: [],
+          claudeCodeExecutablePath: '/custom/path/to/claude',
+        },
+      });
+
+      await collectAsyncGenerator(generator);
+
+      expect(sdk.query).toHaveBeenCalledWith({
+        prompt: 'Test',
+        options: expect.objectContaining({
+          pathToClaudeCodeExecutable: '/custom/path/to/claude',
+        }),
+      });
+    });
+
+    it('should not include pathToClaudeCodeExecutable when claudeCodeExecutablePath is not set', async () => {
+      vi.mocked(sdk.query).mockReturnValue(
+        (async function* () {
+          yield { type: 'text', text: 'test' };
+        })()
+      );
+
+      const generator = provider.executeQuery({
+        prompt: 'Test',
+        model: 'claude-opus-4-6',
+        cwd: '/test',
+        claudeCompatibleProvider: {
+          id: 'test-provider',
+          name: 'Test Provider',
+          providerType: 'custom',
+          baseUrl: 'https://example.com',
+          apiKeySource: 'inline',
+          apiKey: 'test-key',
+          models: [],
+        },
+      });
+
+      await collectAsyncGenerator(generator);
+
+      expect(sdk.query).toHaveBeenCalledWith({
+        prompt: 'Test',
+        options: expect.not.objectContaining({
+          pathToClaudeCodeExecutable: expect.anything(),
+        }),
+      });
+    });
+
     it('should handle errors during execution and rethrow', async () => {
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       const testError = new Error('SDK execution failed');
