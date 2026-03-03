@@ -479,6 +479,10 @@ export interface ClaudeCompatibleProvider {
   providerSettings?: Record<string, unknown>;
   /** Path to a custom Claude Code executable. Uses SDK default if not specified. */
   claudeCodeExecutablePath?: string;
+  /** Extra CLI flags passed to the Claude Code subprocess. Keys without '--', null for boolean flags. */
+  claudeCodeExtraArgs?: Record<string, string | null>;
+  /** Extra environment variables passed to the Claude Code subprocess. */
+  claudeCodeEnvVars?: Record<string, string>;
 }
 
 /**
@@ -520,6 +524,10 @@ export interface ClaudeApiProfile {
   disableNonessentialTraffic?: boolean;
   /** Path to a custom Claude Code executable. Uses SDK default if not specified. */
   claudeCodeExecutablePath?: string;
+  /** Extra CLI flags passed to the Claude Code subprocess. Keys without '--', null for boolean flags. */
+  claudeCodeExtraArgs?: Record<string, string | null>;
+  /** Extra environment variables passed to the Claude Code subprocess. */
+  claudeCodeEnvVars?: Record<string, string>;
 }
 
 /**
@@ -1415,6 +1423,12 @@ export interface GlobalSettings {
   autoLoadClaudeMd?: boolean;
   /** Use Claude Code's built-in system prompt (claude_code preset) as the base prompt */
   useClaudeCodeSystemPrompt?: boolean;
+  /** Path to a custom Claude Code executable. Uses SDK default if not specified. */
+  claudeCodeExecutablePath?: string;
+  /** Extra CLI flags passed to the Claude Code subprocess. Keys without '--', null for boolean flags. */
+  claudeCodeExtraArgs?: Record<string, string | null>;
+  /** Extra environment variables passed to the Claude Code subprocess. */
+  claudeCodeEnvVars?: Record<string, string>;
   /** Skip the sandbox environment warning dialog on startup */
   skipSandboxWarning?: boolean;
 

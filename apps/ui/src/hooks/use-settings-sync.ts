@@ -92,6 +92,9 @@ const SETTINGS_FIELDS_TO_SYNC = [
   'disabledProviders',
   'autoLoadClaudeMd',
   'useClaudeCodeSystemPrompt',
+  'claudeCodeExecutablePath',
+  'claudeCodeExtraArgs',
+  'claudeCodeEnvVars',
   'keyboardShortcuts',
   'mcpServers',
   'defaultEditorCommand',
@@ -830,6 +833,9 @@ export async function refreshSettingsFromServer(): Promise<boolean> {
       disabledProviders: serverSettings.disabledProviders ?? [],
       autoLoadClaudeMd: serverSettings.autoLoadClaudeMd ?? true,
       useClaudeCodeSystemPrompt: serverSettings.useClaudeCodeSystemPrompt ?? true,
+      claudeCodeExecutablePath: serverSettings.claudeCodeExecutablePath ?? undefined,
+      claudeCodeExtraArgs: serverSettings.claudeCodeExtraArgs ?? undefined,
+      claudeCodeEnvVars: serverSettings.claudeCodeEnvVars ?? undefined,
       keyboardShortcuts: {
         ...currentAppState.keyboardShortcuts,
         ...(serverSettings.keyboardShortcuts as unknown as Partial<

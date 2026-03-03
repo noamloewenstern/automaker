@@ -124,6 +124,65 @@ export async function getUseClaudeCodeSystemPromptSetting(
 }
 
 /**
+ * Get the claudeCodeExecutablePath setting from global settings.
+ * Returns undefined if settings service is not available or no path is configured.
+ *
+ * @param settingsService - Optional settings service instance
+ * @returns Promise resolving to the executable path, or undefined
+ */
+export async function getClaudeCodeExecutablePath(
+  settingsService?: SettingsService | null
+): Promise<string | undefined> {
+  if (!settingsService) return undefined;
+  try {
+    const settings = await settingsService.getGlobalSettings();
+    return settings.claudeCodeExecutablePath || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Get the claudeCodeExtraArgs setting from global settings.
+ * Returns undefined if settings service is not available or no args are configured.
+ *
+ * @param settingsService - Optional settings service instance
+ * @returns Promise resolving to the extra args record, or undefined
+ */
+export async function getClaudeCodeExtraArgs(
+  settingsService?: SettingsService | null
+): Promise<Record<string, string | null> | undefined> {
+  if (!settingsService) return undefined;
+  try {
+    const settings = await settingsService.getGlobalSettings();
+    const args = settings.claudeCodeExtraArgs;
+    return args && Object.keys(args).length > 0 ? args : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Get the claudeCodeEnvVars setting from global settings.
+ * Returns undefined if settings service is not available or no env vars are configured.
+ *
+ * @param settingsService - Optional settings service instance
+ * @returns Promise resolving to the env vars record, or undefined
+ */
+export async function getClaudeCodeEnvVars(
+  settingsService?: SettingsService | null
+): Promise<Record<string, string> | undefined> {
+  if (!settingsService) return undefined;
+  try {
+    const settings = await settingsService.getGlobalSettings();
+    const vars = settings.claudeCodeEnvVars;
+    return vars && Object.keys(vars).length > 0 ? vars : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
  * Get the default max turns setting from global settings.
  *
  * Reads the user's configured `defaultMaxTurns` setting, which controls the maximum

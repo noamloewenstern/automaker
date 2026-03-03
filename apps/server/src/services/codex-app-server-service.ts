@@ -7,6 +7,7 @@ import type {
   AppServerAccountResponse,
   AppServerRateLimitsResponse,
   JsonRpcRequest,
+  JsonRpcNotification,
 } from '@automaker/types';
 
 const logger = createLogger('CodexAppServer');
@@ -100,6 +101,16 @@ export class CodexAppServerService {
         shell: needsShell,
       });
 
+      // Log stderr for debugging (silent errors cause timeouts)
+      childProcess.stderr?.on('data', (data: Buffer) => {
+        logger.warn('[app-server stderr]', data.toString().trim());
+      });
+
+      // Handle spawn/process errors to prevent unhandled exceptions
+      childProcess.on('error', (err) => {
+        logger.error('[app-server] Process error:', err.message);
+      });
+
       if (!childProcess.stdin || !childProcess.stdout) {
         throw new Error('Failed to create stdio pipes');
       }
@@ -152,6 +163,7 @@ export class CodexAppServerService {
         return new Promise((resolve, reject) => {
           const id = ++messageId;
           const request: JsonRpcRequest = {
+            jsonrpc: '2.0',
             method,
             id,
             params: params ?? {},
@@ -175,7 +187,11 @@ export class CodexAppServerService {
 
       // Helper to send notification (no response expected)
       const sendNotification = (method: string, params?: unknown): void => {
-        const notification = params ? { method, params } : { method };
+        const notification: JsonRpcNotification = {
+          jsonrpc: '2.0',
+          method,
+          ...(params ? { params } : {}),
+        };
         childProcess!.stdin!.write(JSON.stringify(notification) + '\n');
       };
 

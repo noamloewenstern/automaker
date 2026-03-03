@@ -286,6 +286,186 @@ describe('claude-provider.ts', () => {
       });
     });
 
+    it('should pass pathToClaudeCodeExecutable from global claudeCodeExecutablePath option when no provider config', async () => {
+      vi.mocked(sdk.query).mockReturnValue(
+        (async function* () {
+          yield { type: 'text', text: 'test' };
+        })()
+      );
+
+      const generator = provider.executeQuery({
+        prompt: 'Test',
+        model: 'claude-opus-4-6',
+        cwd: '/test',
+        claudeCodeExecutablePath: '/global/path/to/claude',
+      });
+
+      await collectAsyncGenerator(generator);
+
+      expect(sdk.query).toHaveBeenCalledWith({
+        prompt: 'Test',
+        options: expect.objectContaining({
+          pathToClaudeCodeExecutable: '/global/path/to/claude',
+        }),
+      });
+    });
+
+    it('should prefer provider-specific claudeCodeExecutablePath over global option', async () => {
+      vi.mocked(sdk.query).mockReturnValue(
+        (async function* () {
+          yield { type: 'text', text: 'test' };
+        })()
+      );
+
+      const generator = provider.executeQuery({
+        prompt: 'Test',
+        model: 'claude-opus-4-6',
+        cwd: '/test',
+        claudeCodeExecutablePath: '/global/path/to/claude',
+        claudeCompatibleProvider: {
+          id: 'test-provider',
+          name: 'Test Provider',
+          providerType: 'custom',
+          baseUrl: 'https://example.com',
+          apiKeySource: 'inline',
+          apiKey: 'test-key',
+          models: [],
+          claudeCodeExecutablePath: '/provider/path/to/claude',
+        },
+      });
+
+      await collectAsyncGenerator(generator);
+
+      expect(sdk.query).toHaveBeenCalledWith({
+        prompt: 'Test',
+        options: expect.objectContaining({
+          pathToClaudeCodeExecutable: '/provider/path/to/claude',
+        }),
+      });
+    });
+
+    it('should forward global claudeCodeExtraArgs as extraArgs to SDK', async () => {
+      vi.mocked(sdk.query).mockReturnValue(
+        (async function* () {
+          yield { type: 'text', text: 'test' };
+        })()
+      );
+
+      const generator = provider.executeQuery({
+        prompt: 'Test',
+        model: 'claude-opus-4-6',
+        cwd: '/test',
+        claudeCodeExtraArgs: { 'dangerously-skip-permissions': null, timeout: '60000' },
+      });
+
+      await collectAsyncGenerator(generator);
+
+      expect(sdk.query).toHaveBeenCalledWith({
+        prompt: 'Test',
+        options: expect.objectContaining({
+          extraArgs: { 'dangerously-skip-permissions': null, timeout: '60000' },
+        }),
+      });
+    });
+
+    it('should merge provider-specific extraArgs over global extraArgs', async () => {
+      vi.mocked(sdk.query).mockReturnValue(
+        (async function* () {
+          yield { type: 'text', text: 'test' };
+        })()
+      );
+
+      const generator = provider.executeQuery({
+        prompt: 'Test',
+        model: 'claude-opus-4-6',
+        cwd: '/test',
+        claudeCodeExtraArgs: { timeout: '30000', verbose: null },
+        claudeCompatibleProvider: {
+          id: 'test-provider',
+          name: 'Test Provider',
+          providerType: 'custom',
+          baseUrl: 'https://example.com',
+          apiKeySource: 'inline',
+          apiKey: 'test-key',
+          models: [],
+          claudeCodeExtraArgs: { timeout: '60000' },
+        },
+      });
+
+      await collectAsyncGenerator(generator);
+
+      expect(sdk.query).toHaveBeenCalledWith({
+        prompt: 'Test',
+        options: expect.objectContaining({
+          extraArgs: { timeout: '60000', verbose: null },
+        }),
+      });
+    });
+
+    it('should merge global claudeCodeEnvVars into env', async () => {
+      vi.mocked(sdk.query).mockReturnValue(
+        (async function* () {
+          yield { type: 'text', text: 'test' };
+        })()
+      );
+
+      const generator = provider.executeQuery({
+        prompt: 'Test',
+        model: 'claude-opus-4-6',
+        cwd: '/test',
+        claudeCodeEnvVars: { CLAUDE_CONFIG_DIR: '~/.claude-ziv', MY_VAR: 'hello' },
+      });
+
+      await collectAsyncGenerator(generator);
+
+      expect(sdk.query).toHaveBeenCalledWith({
+        prompt: 'Test',
+        options: expect.objectContaining({
+          env: expect.objectContaining({
+            CLAUDE_CONFIG_DIR: '~/.claude-ziv',
+            MY_VAR: 'hello',
+          }),
+        }),
+      });
+    });
+
+    it('should merge provider-specific envVars over global envVars', async () => {
+      vi.mocked(sdk.query).mockReturnValue(
+        (async function* () {
+          yield { type: 'text', text: 'test' };
+        })()
+      );
+
+      const generator = provider.executeQuery({
+        prompt: 'Test',
+        model: 'claude-opus-4-6',
+        cwd: '/test',
+        claudeCodeEnvVars: { CLAUDE_CONFIG_DIR: '~/.default', SHARED_VAR: 'global' },
+        claudeCompatibleProvider: {
+          id: 'test-provider',
+          name: 'Test Provider',
+          providerType: 'custom',
+          baseUrl: 'https://example.com',
+          apiKeySource: 'inline',
+          apiKey: 'test-key',
+          models: [],
+          claudeCodeEnvVars: { CLAUDE_CONFIG_DIR: '~/.provider-specific' },
+        },
+      });
+
+      await collectAsyncGenerator(generator);
+
+      expect(sdk.query).toHaveBeenCalledWith({
+        prompt: 'Test',
+        options: expect.objectContaining({
+          env: expect.objectContaining({
+            CLAUDE_CONFIG_DIR: '~/.provider-specific',
+            SHARED_VAR: 'global',
+          }),
+        }),
+      });
+    });
+
     it('should handle errors during execution and rethrow', async () => {
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       const testError = new Error('SDK execution failed');

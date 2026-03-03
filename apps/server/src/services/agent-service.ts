@@ -30,6 +30,9 @@ import {
   getCustomSubagents,
   getProviderByModelId,
   getDefaultMaxTurnsSetting,
+  getClaudeCodeExecutablePath,
+  getClaudeCodeExtraArgs,
+  getClaudeCodeEnvVars,
 } from '../lib/settings-helpers.js';
 
 interface Message {
@@ -377,6 +380,11 @@ export class AgentService {
       // Load MCP servers from settings (global setting only)
       const mcpServers = await getMCPServersFromSettings(this.settingsService, '[AgentService]');
 
+      // Load global Claude Code executable path setting
+      const claudeCodeExecutablePath = await getClaudeCodeExecutablePath(this.settingsService);
+      const claudeCodeExtraArgs = await getClaudeCodeExtraArgs(this.settingsService);
+      const claudeCodeEnvVars = await getClaudeCodeEnvVars(this.settingsService);
+
       // Get Skills configuration from settings
       const skillsConfig = this.settingsService
         ? await getSkillsConfiguration(this.settingsService)
@@ -565,6 +573,9 @@ export class AgentService {
         reasoningEffort: effectiveReasoningEffort, // Pass reasoning effort for Codex models
         credentials, // Pass credentials for resolving 'credentials' apiKeySource
         claudeCompatibleProvider, // Pass provider for alternative endpoint configuration (GLM, MiniMax, etc.)
+        claudeCodeExecutablePath, // Global Claude Code executable path
+        claudeCodeExtraArgs, // Global Claude Code extra CLI flags
+        claudeCodeEnvVars, // Global Claude Code extra env vars
       };
 
       // Build prompt content with images

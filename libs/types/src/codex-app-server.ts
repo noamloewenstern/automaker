@@ -68,6 +68,7 @@ export interface AppServerRateLimitWindow {
  * Generic JSON-RPC request structure
  */
 export interface JsonRpcRequest {
+  jsonrpc: '2.0';
   method: string;
   id: number;
   params?: unknown;
@@ -77,6 +78,7 @@ export interface JsonRpcRequest {
  * Generic JSON-RPC response structure
  */
 export interface JsonRpcResponse<T = unknown> {
+  jsonrpc: '2.0';
   id: number;
   result?: T;
   error?: {
@@ -84,4 +86,13 @@ export interface JsonRpcResponse<T = unknown> {
     message: string;
     data?: unknown;
   };
+}
+
+/**
+ * JSON-RPC notification (no id field, no response expected)
+ */
+export interface JsonRpcNotification {
+  jsonrpc: '2.0';
+  method: string;
+  params?: unknown;
 }

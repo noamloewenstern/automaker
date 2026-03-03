@@ -48,6 +48,9 @@ import {
   getPromptCustomization,
   getProviderByModelId,
   getPhaseModelWithOverrides,
+  getClaudeCodeExecutablePath,
+  getClaudeCodeExtraArgs,
+  getClaudeCodeEnvVars,
 } from '../lib/settings-helpers.js';
 
 const logger = createLogger('IdeationService');
@@ -220,6 +223,9 @@ export class IdeationService {
       // Try to find a provider for this model (e.g., GLM, MiniMax models)
       let claudeCompatibleProvider: import('@automaker/types').ClaudeCompatibleProvider | undefined;
       let credentials = await this.settingsService?.getCredentials();
+      const claudeCodeExecutablePath = await getClaudeCodeExecutablePath(this.settingsService);
+      const claudeCodeExtraArgs = await getClaudeCodeExtraArgs(this.settingsService);
+      const claudeCodeEnvVars = await getClaudeCodeEnvVars(this.settingsService);
 
       if (this.settingsService && options?.model) {
         const providerResult = await getProviderByModelId(
@@ -260,6 +266,9 @@ export class IdeationService {
         conversationHistory: conversationHistory.length > 0 ? conversationHistory : undefined,
         claudeCompatibleProvider, // Pass provider for alternative endpoint configuration
         credentials, // Pass credentials for resolving 'credentials' apiKeySource
+        claudeCodeExecutablePath, // Pass custom Claude Code executable path
+        claudeCodeExtraArgs, // Pass extra CLI flags
+        claudeCodeEnvVars, // Pass extra env vars
       };
 
       const stream = provider.executeQuery(executeOptions);
@@ -721,6 +730,11 @@ export class IdeationService {
       const modelId = resolved.model;
       const claudeCompatibleProvider = phaseResult.provider;
       const credentials = phaseResult.credentials;
+      const suggestionsClaudeCodeExecutablePath = await getClaudeCodeExecutablePath(
+        this.settingsService
+      );
+      const suggestionsClaudeCodeExtraArgs = await getClaudeCodeExtraArgs(this.settingsService);
+      const suggestionsClaudeCodeEnvVars = await getClaudeCodeEnvVars(this.settingsService);
 
       logger.info(
         'generateSuggestions using model:',
@@ -754,6 +768,9 @@ export class IdeationService {
         readOnly: true, // Suggestions only need to return JSON, never write files
         claudeCompatibleProvider, // Pass provider for alternative endpoint configuration
         credentials, // Pass credentials for resolving 'credentials' apiKeySource
+        claudeCodeExecutablePath: suggestionsClaudeCodeExecutablePath, // Pass custom Claude Code executable path
+        claudeCodeExtraArgs: suggestionsClaudeCodeExtraArgs, // Pass extra CLI flags
+        claudeCodeEnvVars: suggestionsClaudeCodeEnvVars, // Pass extra env vars
       };
 
       const stream = provider.executeQuery(executeOptions);

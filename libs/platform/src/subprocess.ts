@@ -66,8 +66,15 @@ export async function* spawnJSONLProcess(options: SubprocessOptions): AsyncGener
     shell: needsShell,
   });
 
-  // Write stdin data if provided
+  // Write stdin data if provided.
+  // Attach an error handler BEFORE writing to prevent EPIPE from becoming
+  // an uncaught exception if the child process exits before we finish writing.
   if (stdinData && childProcess.stdin) {
+    childProcess.stdin.on('error', (err) => {
+      console.warn(
+        `[SubprocessManager] stdin write error (${err.message}) - child process likely exited early`
+      );
+    });
     childProcess.stdin.write(stdinData);
     childProcess.stdin.end();
   }
@@ -331,6 +338,11 @@ export async function spawnProcess(options: SubprocessOptions): Promise<Subproce
     });
 
     if (stdinData && childProcess.stdin) {
+      childProcess.stdin.on('error', (err) => {
+        console.warn(
+          `[SubprocessManager] stdin write error (${err.message}) - child process likely exited early`
+        );
+      });
       childProcess.stdin.write(stdinData);
       childProcess.stdin.end();
     }

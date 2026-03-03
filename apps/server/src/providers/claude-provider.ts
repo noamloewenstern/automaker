@@ -249,11 +249,33 @@ export class ClaudeProvider extends BaseProvider {
       ...(options.agents && { agents: options.agents }),
       // Pass through outputFormat for structured JSON outputs
       ...(options.outputFormat && { outputFormat: options.outputFormat }),
-      // Custom Claude Code executable path from provider config
-      ...(providerConfig?.claudeCodeExecutablePath && {
-        pathToClaudeCodeExecutable: providerConfig.claudeCodeExecutablePath,
-      }),
+      // Custom Claude Code executable path (provider-specific takes precedence over global)
+      ...(() => {
+        const execPath =
+          (providerConfig as { claudeCodeExecutablePath?: string } | undefined)
+            ?.claudeCodeExecutablePath || options.claudeCodeExecutablePath;
+        return execPath ? { pathToClaudeCodeExecutable: execPath } : {};
+      })(),
+      // Extra CLI flags (provider-specific merged over global)
+      ...(() => {
+        const globalArgs = options.claudeCodeExtraArgs;
+        const providerArgs = (
+          providerConfig as { claudeCodeExtraArgs?: Record<string, string | null> } | undefined
+        )?.claudeCodeExtraArgs;
+        const merged = { ...globalArgs, ...providerArgs };
+        return Object.keys(merged).length > 0 ? { extraArgs: merged } : {};
+      })(),
     };
+
+    // Merge extra env vars (provider-specific over global) into SDK env
+    const extraEnvVars = {
+      ...options.claudeCodeEnvVars,
+      ...(providerConfig as { claudeCodeEnvVars?: Record<string, string> } | undefined)
+        ?.claudeCodeEnvVars,
+    };
+    if (Object.keys(extraEnvVars).length > 0) {
+      sdkOptions.env = { ...sdkOptions.env, ...extraEnvVars };
+    }
 
     // Build prompt payload
     let promptPayload: string | AsyncIterable<SDKUserMessage>;

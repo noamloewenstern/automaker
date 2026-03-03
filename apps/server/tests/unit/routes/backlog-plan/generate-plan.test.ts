@@ -53,6 +53,9 @@ vi.mock('@/lib/settings-helpers.js', () => ({
   getAutoLoadClaudeMdSetting: mockGetAutoLoadClaudeMdSetting,
   getUseClaudeCodeSystemPromptSetting: mockGetUseClaudeCodeSystemPromptSetting,
   getPhaseModelWithOverrides: vi.fn(),
+  getClaudeCodeExecutablePath: vi.fn().mockResolvedValue(undefined),
+  getClaudeCodeExtraArgs: vi.fn().mockResolvedValue(undefined),
+  getClaudeCodeEnvVars: vi.fn().mockResolvedValue(undefined),
 }));
 
 import { generateBacklogPlan } from '@/routes/backlog-plan/generate-plan.js';

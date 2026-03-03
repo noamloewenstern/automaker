@@ -19,6 +19,9 @@ import type { SettingsService } from '../../services/settings-service.js';
 import {
   getAutoLoadClaudeMdSetting,
   getPhaseModelWithOverrides,
+  getClaudeCodeExecutablePath,
+  getClaudeCodeExtraArgs,
+  getClaudeCodeEnvVars,
 } from '../../lib/settings-helpers.js';
 import { FeatureLoader } from '../../services/feature-loader.js';
 import {
@@ -194,6 +197,9 @@ export async function syncSpec(
         provider: undefined,
         credentials: undefined,
       };
+  const claudeCodeExecutablePath = await getClaudeCodeExecutablePath(settingsService);
+  const claudeCodeExtraArgs = await getClaudeCodeExtraArgs(settingsService);
+  const claudeCodeEnvVars = await getClaudeCodeEnvVars(settingsService);
   const { model, thinkingLevel } = resolvePhaseModel(phaseModelEntry);
 
   logger.info('Using model:', model, provider ? `via provider: ${provider.name}` : 'direct API');
@@ -244,6 +250,9 @@ CRITICAL INSTRUCTIONS:
       settingSources: autoLoadClaudeMd ? ['user', 'project', 'local'] : undefined,
       claudeCompatibleProvider: provider, // Pass provider for alternative endpoint configuration
       credentials, // Pass credentials for resolving 'credentials' apiKeySource
+      claudeCodeExecutablePath, // Pass custom Claude Code executable path
+      claudeCodeExtraArgs, // Pass extra CLI flags
+      claudeCodeEnvVars, // Pass extra env vars
       outputFormat: useStructuredOutput
         ? {
             type: 'json_schema',

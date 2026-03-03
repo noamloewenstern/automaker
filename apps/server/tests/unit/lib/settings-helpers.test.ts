@@ -5,6 +5,7 @@ import {
   getProviderByModelId,
   resolveProviderContext,
   getAllProviderModels,
+  getClaudeCodeEnvVars,
 } from '@/lib/settings-helpers.js';
 import type { SettingsService } from '@/services/settings-service.js';
 
@@ -977,6 +978,59 @@ describe('settings-helpers.ts', () => {
       const result = await getAllProviderModels(mockSettingsService);
 
       expect(result).toEqual([]);
+    });
+  });
+
+  describe('getClaudeCodeEnvVars', () => {
+    beforeEach(() => {
+      vi.clearAllMocks();
+    });
+
+    it('should return undefined when settingsService is null', async () => {
+      const result = await getClaudeCodeEnvVars(null);
+      expect(result).toBeUndefined();
+    });
+
+    it('should return undefined when settingsService is undefined', async () => {
+      const result = await getClaudeCodeEnvVars(undefined);
+      expect(result).toBeUndefined();
+    });
+
+    it('should return undefined when no env vars configured', async () => {
+      const mockSettingsService = {
+        getGlobalSettings: vi.fn().mockResolvedValue({}),
+      } as unknown as SettingsService;
+
+      const result = await getClaudeCodeEnvVars(mockSettingsService);
+      expect(result).toBeUndefined();
+    });
+
+    it('should return undefined when env vars is empty object', async () => {
+      const mockSettingsService = {
+        getGlobalSettings: vi.fn().mockResolvedValue({ claudeCodeEnvVars: {} }),
+      } as unknown as SettingsService;
+
+      const result = await getClaudeCodeEnvVars(mockSettingsService);
+      expect(result).toBeUndefined();
+    });
+
+    it('should return env vars when configured', async () => {
+      const envVars = { MY_VAR: 'hello', OTHER: 'world' };
+      const mockSettingsService = {
+        getGlobalSettings: vi.fn().mockResolvedValue({ claudeCodeEnvVars: envVars }),
+      } as unknown as SettingsService;
+
+      const result = await getClaudeCodeEnvVars(mockSettingsService);
+      expect(result).toEqual({ MY_VAR: 'hello', OTHER: 'world' });
+    });
+
+    it('should return undefined on error', async () => {
+      const mockSettingsService = {
+        getGlobalSettings: vi.fn().mockRejectedValue(new Error('Settings error')),
+      } as unknown as SettingsService;
+
+      const result = await getClaudeCodeEnvVars(mockSettingsService);
+      expect(result).toBeUndefined();
     });
   });
 });

@@ -39,6 +39,9 @@ import {
   getPromptCustomization,
   getAutoLoadClaudeMdSetting,
   resolveProviderContext,
+  getClaudeCodeExecutablePath,
+  getClaudeCodeExtraArgs,
+  getClaudeCodeEnvVars,
 } from '../../../lib/settings-helpers.js';
 import {
   trySetValidationRunning,
@@ -177,6 +180,9 @@ ${basePrompt}`;
     let claudeCompatibleProvider: import('@automaker/types').ClaudeCompatibleProvider | undefined;
     let providerResolvedModel: string | undefined;
     let credentials = await settingsService?.getCredentials();
+    const claudeCodeExecutablePath = await getClaudeCodeExecutablePath(settingsService);
+    const claudeCodeExtraArgs = await getClaudeCodeExtraArgs(settingsService);
+    const claudeCodeEnvVars = await getClaudeCodeEnvVars(settingsService);
 
     if (settingsService) {
       const providerResult = await resolveProviderContext(
@@ -217,6 +223,9 @@ ${basePrompt}`;
       settingSources: autoLoadClaudeMd ? ['user', 'project', 'local'] : undefined,
       claudeCompatibleProvider, // Pass provider for alternative endpoint configuration
       credentials, // Pass credentials for resolving 'credentials' apiKeySource
+      claudeCodeExecutablePath, // Pass custom Claude Code executable path
+      claudeCodeExtraArgs, // Pass extra CLI flags
+      claudeCodeEnvVars, // Pass extra env vars
       outputFormat: useStructuredOutput
         ? {
             type: 'json_schema',

@@ -22,6 +22,9 @@ import {
   getAutoLoadClaudeMdSetting,
   getPromptCustomization,
   getPhaseModelWithOverrides,
+  getClaudeCodeExecutablePath,
+  getClaudeCodeExtraArgs,
+  getClaudeCodeEnvVars,
 } from '../../../lib/settings-helpers.js';
 
 const logger = createLogger('DescribeFile');
@@ -166,6 +169,9 @@ ${contentToAnalyze}`;
         cwd,
         '[DescribeFile]'
       );
+      const claudeCodeExecutablePath = await getClaudeCodeExecutablePath(settingsService);
+      const claudeCodeExtraArgs = await getClaudeCodeExtraArgs(settingsService);
+      const claudeCodeEnvVars = await getClaudeCodeEnvVars(settingsService);
       const { model, thinkingLevel } = resolvePhaseModel(phaseModelEntry);
 
       logger.info(
@@ -185,6 +191,9 @@ ${contentToAnalyze}`;
         settingSources: autoLoadClaudeMd ? ['user', 'project', 'local'] : undefined,
         claudeCompatibleProvider: provider, // Pass provider for alternative endpoint configuration
         credentials, // Pass credentials for resolving 'credentials' apiKeySource
+        claudeCodeExecutablePath, // Pass custom Claude Code executable path
+        claudeCodeExtraArgs, // Pass extra CLI flags
+        claudeCodeEnvVars, // Pass extra env vars
       });
 
       const description = result.text;

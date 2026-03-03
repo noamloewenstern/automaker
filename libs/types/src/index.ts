@@ -55,6 +55,7 @@ export type {
   AppServerRateLimitWindow,
   JsonRpcRequest,
   JsonRpcResponse,
+  JsonRpcNotification,
 } from './codex-app-server.js';
 
 // Feature types

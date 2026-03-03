@@ -10,7 +10,12 @@ import { createLogger } from '@automaker/utils';
 import { CLAUDE_MODEL_MAP } from '@automaker/model-resolver';
 import { simpleQuery } from '../../../providers/simple-query-service.js';
 import type { SettingsService } from '../../../services/settings-service.js';
-import { getPromptCustomization } from '../../../lib/settings-helpers.js';
+import {
+  getPromptCustomization,
+  getClaudeCodeExecutablePath,
+  getClaudeCodeExtraArgs,
+  getClaudeCodeEnvVars,
+} from '../../../lib/settings-helpers.js';
 
 const logger = createLogger('GenerateTitle');
 
@@ -63,6 +68,9 @@ export function createGenerateTitleHandler(
 
       // Get credentials for API calls (uses hardcoded haiku model, no phase setting)
       const credentials = await settingsService?.getCredentials();
+      const claudeCodeExecutablePath = await getClaudeCodeExecutablePath(settingsService);
+      const claudeCodeExtraArgs = await getClaudeCodeExtraArgs(settingsService);
+      const claudeCodeEnvVars = await getClaudeCodeEnvVars(settingsService);
 
       const userPrompt = `Generate a concise title for this feature:\n\n${trimmedDescription}`;
 
@@ -74,6 +82,9 @@ export function createGenerateTitleHandler(
         maxTurns: 1,
         allowedTools: [],
         credentials, // Pass credentials for resolving 'credentials' apiKeySource
+        claudeCodeExecutablePath, // Pass custom Claude Code executable path
+        claudeCodeExtraArgs, // Pass extra CLI flags
+        claudeCodeEnvVars, // Pass extra env vars
       });
 
       const title = result.text;

@@ -19,6 +19,9 @@ import {
   getAutoLoadClaudeMdSetting,
   getPromptCustomization,
   getPhaseModelWithOverrides,
+  getClaudeCodeExecutablePath,
+  getClaudeCodeExtraArgs,
+  getClaudeCodeEnvVars,
 } from '../../lib/settings-helpers.js';
 import { FeatureLoader } from '../../services/feature-loader.js';
 
@@ -195,6 +198,9 @@ Generate ${featureCount} NEW features that build on each other logically. Rememb
         provider: undefined,
         credentials: undefined,
       };
+  const claudeCodeExecutablePath = await getClaudeCodeExecutablePath(settingsService);
+  const claudeCodeExtraArgs = await getClaudeCodeExtraArgs(settingsService);
+  const claudeCodeEnvVars = await getClaudeCodeEnvVars(settingsService);
   const { model, thinkingLevel, reasoningEffort } = resolvePhaseModel(phaseModelEntry);
 
   logger.info('Using model:', model, provider ? `via provider: ${provider.name}` : 'direct API');
@@ -263,6 +269,9 @@ Your entire response should be valid JSON starting with { and ending with }. No 
     settingSources: autoLoadClaudeMd ? ['user', 'project', 'local'] : undefined,
     claudeCompatibleProvider: provider, // Pass provider for alternative endpoint configuration
     credentials, // Pass credentials for resolving 'credentials' apiKeySource
+    claudeCodeExecutablePath, // Pass custom Claude Code executable path
+    claudeCodeExtraArgs, // Pass extra CLI flags
+    claudeCodeEnvVars, // Pass extra env vars
     outputFormat: useStructuredOutput
       ? {
           type: 'json_schema',

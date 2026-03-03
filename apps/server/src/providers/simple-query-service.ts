@@ -67,6 +67,12 @@ export interface SimpleQueryOptions {
   claudeCompatibleProvider?: ClaudeCompatibleProvider;
   /** Credentials for resolving 'credentials' apiKeySource in Claude API profiles/providers */
   credentials?: Credentials;
+  /** Global path to Claude Code executable. Provider-specific path takes precedence. */
+  claudeCodeExecutablePath?: string;
+  /** Extra CLI flags passed to the Claude Code subprocess. Keys without '--', null for boolean flags. */
+  claudeCodeExtraArgs?: Record<string, string | null>;
+  /** Extra environment variables passed to the Claude Code subprocess. */
+  claudeCodeEnvVars?: Record<string, string>;
 }
 
 /**
@@ -141,6 +147,9 @@ export async function simpleQuery(options: SimpleQueryOptions): Promise<SimpleQu
     claudeApiProfile: options.claudeApiProfile, // Legacy: Pass active Claude API profile for alternative endpoint configuration
     claudeCompatibleProvider: options.claudeCompatibleProvider, // New: Pass Claude-compatible provider (takes precedence)
     credentials: options.credentials, // Pass credentials for resolving 'credentials' apiKeySource
+    claudeCodeExecutablePath: options.claudeCodeExecutablePath, // Global Claude Code executable path
+    claudeCodeExtraArgs: options.claudeCodeExtraArgs, // Global Claude Code extra CLI flags
+    claudeCodeEnvVars: options.claudeCodeEnvVars, // Global Claude Code extra env vars
   };
 
   for await (const msg of provider.executeQuery(providerOptions)) {
@@ -226,6 +235,9 @@ export async function streamingQuery(options: StreamingQueryOptions): Promise<Si
     claudeApiProfile: options.claudeApiProfile, // Legacy: Pass active Claude API profile for alternative endpoint configuration
     claudeCompatibleProvider: options.claudeCompatibleProvider, // New: Pass Claude-compatible provider (takes precedence)
     credentials: options.credentials, // Pass credentials for resolving 'credentials' apiKeySource
+    claudeCodeExecutablePath: options.claudeCodeExecutablePath, // Global Claude Code executable path
+    claudeCodeExtraArgs: options.claudeCodeExtraArgs, // Global Claude Code extra CLI flags
+    claudeCodeEnvVars: options.claudeCodeEnvVars, // Global Claude Code extra env vars
   };
 
   for await (const msg of provider.executeQuery(providerOptions)) {

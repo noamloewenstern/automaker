@@ -17,7 +17,12 @@ import { resolvePhaseModel } from '@automaker/model-resolver';
 import { ProviderFactory } from '../../../providers/provider-factory.js';
 import type { SettingsService } from '../../../services/settings-service.js';
 import { getErrorMessage, logError } from '../common.js';
-import { getPhaseModelWithOverrides } from '../../../lib/settings-helpers.js';
+import {
+  getPhaseModelWithOverrides,
+  getClaudeCodeExecutablePath,
+  getClaudeCodeExtraArgs,
+  getClaudeCodeEnvVars,
+} from '../../../lib/settings-helpers.js';
 
 const logger = createLogger('GeneratePRDescription');
 const execFileAsync = promisify(execFile);
@@ -356,6 +361,9 @@ export function createGeneratePRDescriptionHandler(
         worktreePath,
         '[GeneratePRDescription]'
       );
+      const claudeCodeExecutablePath = await getClaudeCodeExecutablePath(settingsService);
+      const claudeCodeExtraArgs = await getClaudeCodeExtraArgs(settingsService);
+      const claudeCodeEnvVars = await getClaudeCodeEnvVars(settingsService);
       const { model, thinkingLevel } = resolvePhaseModel(phaseModelEntry);
 
       logger.info(
@@ -387,6 +395,9 @@ export function createGeneratePRDescriptionHandler(
         thinkingLevel,
         claudeCompatibleProvider,
         credentials,
+        claudeCodeExecutablePath, // Pass custom Claude Code executable path
+        claudeCodeExtraArgs, // Pass extra CLI flags
+        claudeCodeEnvVars, // Pass extra env vars
       });
 
       // Wrap with timeout

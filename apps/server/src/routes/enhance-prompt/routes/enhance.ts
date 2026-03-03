@@ -13,7 +13,13 @@ import { CLAUDE_MODEL_MAP, type ThinkingLevel } from '@automaker/types';
 import { getAppSpecPath } from '@automaker/platform';
 import { simpleQuery } from '../../../providers/simple-query-service.js';
 import type { SettingsService } from '../../../services/settings-service.js';
-import { getPromptCustomization, getProviderByModelId } from '../../../lib/settings-helpers.js';
+import {
+  getPromptCustomization,
+  getProviderByModelId,
+  getClaudeCodeExecutablePath,
+  getClaudeCodeExtraArgs,
+  getClaudeCodeEnvVars,
+} from '../../../lib/settings-helpers.js';
 import { FeatureLoader } from '../../../services/feature-loader.js';
 import * as secureFs from '../../../lib/secure-fs.js';
 import {
@@ -201,6 +207,9 @@ export function createEnhanceHandler(
       let claudeCompatibleProvider: import('@automaker/types').ClaudeCompatibleProvider | undefined;
       let providerResolvedModel: string | undefined;
       let credentials = await settingsService?.getCredentials();
+      const claudeCodeExecutablePath = await getClaudeCodeExecutablePath(settingsService);
+      const claudeCodeExtraArgs = await getClaudeCodeExtraArgs(settingsService);
+      const claudeCodeEnvVars = await getClaudeCodeEnvVars(settingsService);
 
       if (model && settingsService) {
         const providerResult = await getProviderByModelId(
@@ -241,6 +250,9 @@ export function createEnhanceHandler(
         readOnly: true, // Prompt enhancement only generates text, doesn't write files
         credentials, // Pass credentials for resolving 'credentials' apiKeySource
         claudeCompatibleProvider, // Pass provider for alternative endpoint configuration
+        claudeCodeExecutablePath, // Pass custom Claude Code executable path
+        claudeCodeExtraArgs, // Pass extra CLI flags
+        claudeCodeEnvVars, // Pass extra env vars
       });
 
       const enhancedText = result.text;

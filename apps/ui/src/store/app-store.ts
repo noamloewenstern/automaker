@@ -347,6 +347,9 @@ const initialState: AppState = {
   disabledProviders: [],
   autoLoadClaudeMd: false,
   useClaudeCodeSystemPrompt: true,
+  claudeCodeExecutablePath: undefined as string | undefined,
+  claudeCodeExtraArgs: undefined as Record<string, string | null> | undefined,
+  claudeCodeEnvVars: undefined as Record<string, string> | undefined,
   skipSandboxWarning: false,
   mcpServers: [],
   defaultEditorCommand: null,
@@ -1466,6 +1469,33 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
       await httpApi.settings.updateGlobal({ useClaudeCodeSystemPrompt: enabled });
     } catch (error) {
       logger.error('Failed to sync useClaudeCodeSystemPrompt:', error);
+    }
+  },
+  setClaudeCodeExecutablePath: async (path: string | undefined) => {
+    set({ claudeCodeExecutablePath: path });
+    try {
+      const httpApi = getHttpApiClient();
+      await httpApi.settings.updateGlobal({ claudeCodeExecutablePath: path ?? null });
+    } catch (error) {
+      logger.error('Failed to sync claudeCodeExecutablePath:', error);
+    }
+  },
+  setClaudeCodeExtraArgs: async (args: Record<string, string | null> | undefined) => {
+    set({ claudeCodeExtraArgs: args });
+    try {
+      const httpApi = getHttpApiClient();
+      await httpApi.settings.updateGlobal({ claudeCodeExtraArgs: args ?? null });
+    } catch (error) {
+      logger.error('Failed to sync claudeCodeExtraArgs:', error);
+    }
+  },
+  setClaudeCodeEnvVars: async (vars: Record<string, string> | undefined) => {
+    set({ claudeCodeEnvVars: vars });
+    try {
+      const httpApi = getHttpApiClient();
+      await httpApi.settings.updateGlobal({ claudeCodeEnvVars: vars ?? null });
+    } catch (error) {
+      logger.error('Failed to sync claudeCodeEnvVars:', error);
     }
   },
   setSkipSandboxWarning: async (skip) => {

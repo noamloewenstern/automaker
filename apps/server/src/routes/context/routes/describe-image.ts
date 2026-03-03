@@ -23,6 +23,9 @@ import {
   getAutoLoadClaudeMdSetting,
   getPromptCustomization,
   getPhaseModelWithOverrides,
+  getClaudeCodeExecutablePath,
+  getClaudeCodeExtraArgs,
+  getClaudeCodeEnvVars,
 } from '../../../lib/settings-helpers.js';
 
 const logger = createLogger('DescribeImage');
@@ -307,6 +310,9 @@ export function createDescribeImageHandler(
         cwd,
         '[DescribeImage]'
       );
+      const claudeCodeExecutablePath = await getClaudeCodeExecutablePath(settingsService);
+      const claudeCodeExtraArgs = await getClaudeCodeExtraArgs(settingsService);
+      const claudeCodeEnvVars = await getClaudeCodeEnvVars(settingsService);
       const { model, thinkingLevel } = resolvePhaseModel(phaseModelEntry);
 
       logger.info(
@@ -360,6 +366,9 @@ export function createDescribeImageHandler(
         settingSources: autoLoadClaudeMd ? ['user', 'project', 'local'] : undefined,
         claudeCompatibleProvider: provider, // Pass provider for alternative endpoint configuration
         credentials, // Pass credentials for resolving 'credentials' apiKeySource
+        claudeCodeExecutablePath, // Pass custom Claude Code executable path
+        claudeCodeExtraArgs, // Pass extra CLI flags
+        claudeCodeEnvVars, // Pass extra env vars
       });
 
       logger.info(`[${requestId}] simpleQuery completed in ${Date.now() - queryStart}ms`);

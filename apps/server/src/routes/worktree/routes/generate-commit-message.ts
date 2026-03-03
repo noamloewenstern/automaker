@@ -17,7 +17,12 @@ import { mergeCommitMessagePrompts } from '@automaker/prompts';
 import { ProviderFactory } from '../../../providers/provider-factory.js';
 import type { SettingsService } from '../../../services/settings-service.js';
 import { getErrorMessage, logError } from '../common.js';
-import { getPhaseModelWithOverrides } from '../../../lib/settings-helpers.js';
+import {
+  getPhaseModelWithOverrides,
+  getClaudeCodeExecutablePath,
+  getClaudeCodeExtraArgs,
+  getClaudeCodeEnvVars,
+} from '../../../lib/settings-helpers.js';
 
 const logger = createLogger('GenerateCommitMessage');
 const execFileAsync = promisify(execFile);
@@ -187,6 +192,9 @@ export function createGenerateCommitMessageHandler(
         worktreePath,
         '[GenerateCommitMessage]'
       );
+      const claudeCodeExecutablePath = await getClaudeCodeExecutablePath(settingsService);
+      const claudeCodeExtraArgs = await getClaudeCodeExtraArgs(settingsService);
+      const claudeCodeEnvVars = await getClaudeCodeEnvVars(settingsService);
       const { model, thinkingLevel } = resolvePhaseModel(phaseModelEntry);
 
       logger.info(
@@ -221,6 +229,9 @@ export function createGenerateCommitMessageHandler(
         thinkingLevel, // Pass thinking level for extended thinking support
         claudeCompatibleProvider, // Pass provider for alternative endpoint configuration
         credentials, // Pass credentials for resolving 'credentials' apiKeySource
+        claudeCodeExecutablePath, // Pass custom Claude Code executable path
+        claudeCodeExtraArgs, // Pass extra CLI flags
+        claudeCodeEnvVars, // Pass extra env vars
       });
 
       // Wrap with timeout to prevent indefinite hangs

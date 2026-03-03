@@ -36,6 +36,9 @@ import {
   getPromptCustomization,
   getPhaseModelWithOverrides,
   getProviderByModelId,
+  getClaudeCodeExecutablePath,
+  getClaudeCodeExtraArgs,
+  getClaudeCodeEnvVars,
 } from '../../lib/settings-helpers.js';
 
 /** Maximum number of retry attempts for transient CLI failures */
@@ -286,6 +289,10 @@ export async function generateBacklogPlan(
       claudeCompatibleProvider ? `via provider: ${claudeCompatibleProvider.name}` : 'direct API'
     );
 
+    const claudeCodeExecutablePath = await getClaudeCodeExecutablePath(settingsService);
+    const claudeCodeExtraArgs = await getClaudeCodeExtraArgs(settingsService);
+    const claudeCodeEnvVars = await getClaudeCodeEnvVars(settingsService);
+
     const provider = ProviderFactory.getProviderForModel(effectiveModel);
     // Strip provider prefix - providers expect bare model IDs
     const bareModel = stripProviderPrefix(effectiveModel);
@@ -352,6 +359,9 @@ ${userPrompt}`;
       thinkingLevel, // Pass thinking level for extended thinking
       claudeCompatibleProvider, // Pass provider for alternative endpoint configuration
       credentials, // Pass credentials for resolving 'credentials' apiKeySource
+      claudeCodeExecutablePath, // Pass custom Claude Code executable path
+      claudeCodeExtraArgs, // Pass extra CLI flags
+      claudeCodeEnvVars, // Pass extra env vars
     };
 
     let responseText = '';
