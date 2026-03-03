@@ -477,6 +477,8 @@ export interface ClaudeCompatibleProvider {
 
   /** Provider-specific settings for future extensibility */
   providerSettings?: Record<string, unknown>;
+  /** Path to a custom Claude Code executable. Uses SDK default if not specified. */
+  claudeCodeExecutablePath?: string;
 }
 
 /**
@@ -516,6 +518,8 @@ export interface ClaudeApiProfile {
   };
   /** Set CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1 */
   disableNonessentialTraffic?: boolean;
+  /** Path to a custom Claude Code executable. Uses SDK default if not specified. */
+  claudeCodeExecutablePath?: string;
 }
 
 /**
