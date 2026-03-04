@@ -10,6 +10,7 @@ import { useGuidedPrompts } from '@/hooks/use-guided-prompts';
 import { useIdeationStore } from '@/store/ideation-store';
 import { useAppStore } from '@/store/app-store';
 import { useGenerateIdeationSuggestions } from '@/hooks/mutations';
+import { CustomPromptListCard } from './custom-prompt-card';
 import { toast } from 'sonner';
 import type { IdeaCategory, IdeationPrompt } from '@automaker/types';
 
@@ -23,6 +24,8 @@ export function PromptList({ category, onBack }: PromptListProps) {
   const generationJobs = useIdeationStore((s) => s.generationJobs);
   const setMode = useIdeationStore((s) => s.setMode);
   const addGenerationJob = useIdeationStore((s) => s.addGenerationJob);
+  const openCustomPromptDialog = useIdeationStore((s) => s.openCustomPromptDialog);
+  const { getCategoryById } = useGuidedPrompts();
   const [loadingPromptId, setLoadingPromptId] = useState<string | null>(null);
   const [startedPrompts, setStartedPrompts] = useState<Set<string>>(new Set());
 
@@ -170,6 +173,14 @@ export function PromptList({ category, onBack }: PromptListProps) {
                 </Card>
               );
             })}
+
+          {/* Custom prompt card at the bottom */}
+          {!isLoadingPrompts && !promptsError && (
+            <CustomPromptListCard
+              categoryLabel={getCategoryById(category)?.name}
+              onClick={() => openCustomPromptDialog(category)}
+            />
+          )}
         </div>
       </div>
     </div>

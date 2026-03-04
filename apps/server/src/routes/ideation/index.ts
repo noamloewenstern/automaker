@@ -23,6 +23,14 @@ import { createConvertHandler } from './routes/convert.js';
 import { createAddSuggestionHandler } from './routes/add-suggestion.js';
 import { createPromptsHandler, createPromptsByCategoryHandler } from './routes/prompts.js';
 import { createSuggestionsGenerateHandler } from './routes/suggestions-generate.js';
+import { createEnhancePromptHandler } from './routes/enhance-prompt.js';
+import {
+  createCustomPromptsListHandler,
+  createCustomPromptsSaveHandler,
+  createCustomPromptsUpdateHandler,
+  createCustomPromptsDeleteHandler,
+} from './routes/custom-prompts.js';
+import { createPromptHistoryHandler } from './routes/prompt-history.js';
 
 export function createIdeationRoutes(
   events: EventEmitter,
@@ -103,6 +111,42 @@ export function createIdeationRoutes(
     '/suggestions/generate',
     validatePathParams('projectPath'),
     createSuggestionsGenerateHandler(ideationService)
+  );
+
+  // Enhance prompt
+  router.post(
+    '/enhance-prompt',
+    validatePathParams('projectPath'),
+    createEnhancePromptHandler(ideationService)
+  );
+
+  // Custom prompts CRUD
+  router.post(
+    '/custom-prompts/list',
+    validatePathParams('projectPath'),
+    createCustomPromptsListHandler(ideationService)
+  );
+  router.post(
+    '/custom-prompts/save',
+    validatePathParams('projectPath'),
+    createCustomPromptsSaveHandler(ideationService)
+  );
+  router.post(
+    '/custom-prompts/update',
+    validatePathParams('projectPath'),
+    createCustomPromptsUpdateHandler(ideationService)
+  );
+  router.post(
+    '/custom-prompts/delete',
+    validatePathParams('projectPath'),
+    createCustomPromptsDeleteHandler(ideationService)
+  );
+
+  // Prompt history
+  router.post(
+    '/prompt-history',
+    validatePathParams('projectPath'),
+    createPromptHistoryHandler(ideationService)
   );
 
   return router;

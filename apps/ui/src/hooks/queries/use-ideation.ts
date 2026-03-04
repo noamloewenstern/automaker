@@ -84,3 +84,43 @@ export function useIdea(projectPath: string | undefined, ideaId: string | undefi
     staleTime: STALE_TIMES.FEATURES,
   });
 }
+
+/**
+ * Fetch saved custom prompts for a project
+ */
+export function useCustomPrompts(projectPath: string | undefined) {
+  return useQuery({
+    queryKey: queryKeys.ideation.customPrompts(projectPath ?? ''),
+    queryFn: async () => {
+      if (!projectPath) throw new Error('No project path');
+      const api = getElectronAPI();
+      const result = await api.ideation?.listCustomPrompts(projectPath);
+      if (!result?.success) {
+        throw new Error(result?.error || 'Failed to fetch custom prompts');
+      }
+      return result.prompts ?? [];
+    },
+    enabled: !!projectPath,
+    staleTime: STALE_TIMES.FEATURES,
+  });
+}
+
+/**
+ * Fetch prompt usage history for a project
+ */
+export function usePromptHistory(projectPath: string | undefined) {
+  return useQuery({
+    queryKey: queryKeys.ideation.promptHistory(projectPath ?? ''),
+    queryFn: async () => {
+      if (!projectPath) throw new Error('No project path');
+      const api = getElectronAPI();
+      const result = await api.ideation?.getPromptHistory(projectPath);
+      if (!result?.success) {
+        throw new Error(result?.error || 'Failed to fetch prompt history');
+      }
+      return result.history ?? [];
+    },
+    enabled: !!projectPath,
+    staleTime: STALE_TIMES.FEATURES,
+  });
+}

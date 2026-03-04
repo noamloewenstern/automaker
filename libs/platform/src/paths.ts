@@ -344,7 +344,24 @@ export async function ensureIdeationDir(projectPath: string): Promise<string> {
   await secureFs.mkdir(getIdeasDir(projectPath), { recursive: true });
   await secureFs.mkdir(getIdeationSessionsDir(projectPath), { recursive: true });
   await secureFs.mkdir(getIdeationDraftsDir(projectPath), { recursive: true });
+  await secureFs.mkdir(getCustomPromptsDir(projectPath), { recursive: true });
   return ideationDir;
+}
+
+// ============================================================================
+// Custom Prompts & Prompt History Paths
+// ============================================================================
+
+export function getCustomPromptsDir(projectPath: string): string {
+  return path.join(getIdeationDir(projectPath), 'custom-prompts');
+}
+
+export function getCustomPromptPath(projectPath: string, promptId: string): string {
+  return path.join(getCustomPromptsDir(projectPath), `${promptId}.json`);
+}
+
+export function getPromptHistoryPath(projectPath: string): string {
+  return path.join(getIdeationDir(projectPath), 'prompt-history.json');
 }
 
 // ============================================================================

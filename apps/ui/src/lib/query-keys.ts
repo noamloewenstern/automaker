@@ -169,6 +169,10 @@ export const queryKeys = {
     /** Session */
     session: (projectPath: string, sessionId: string) =>
       ['ideation', 'session', projectPath, sessionId] as const,
+    /** Custom prompts for a project */
+    customPrompts: (projectPath: string) => ['ideation', 'customPrompts', projectPath] as const,
+    /** Prompt usage history for a project */
+    promptHistory: (projectPath: string) => ['ideation', 'promptHistory', projectPath] as const,
   },
 
   // ============================================

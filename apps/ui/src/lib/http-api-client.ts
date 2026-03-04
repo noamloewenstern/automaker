@@ -3099,10 +3099,11 @@ export class HttpApiClient implements ElectronAPI {
 
     generateSuggestions: (
       projectPath: string,
-      promptId: string,
+      promptId: string | null,
       category: IdeaCategory,
       count?: number,
-      contextSources?: IdeationContextSources
+      contextSources?: IdeationContextSources,
+      customPromptText?: string
     ) =>
       this.post('/api/ideation/suggestions/generate', {
         projectPath,
@@ -3110,7 +3111,48 @@ export class HttpApiClient implements ElectronAPI {
         category,
         count,
         contextSources,
+        customPromptText,
       }),
+
+    enhancePrompt: (
+      projectPath: string,
+      promptText: string,
+      category?: IdeaCategory,
+      intensity?: 'refine' | 'expand',
+      contextSources?: IdeationContextSources,
+      customSystemPrompt?: string
+    ) =>
+      this.post('/api/ideation/enhance-prompt', {
+        projectPath,
+        promptText,
+        category,
+        intensity,
+        contextSources,
+        customSystemPrompt,
+      }),
+
+    listCustomPrompts: (projectPath: string) =>
+      this.post('/api/ideation/custom-prompts/list', { projectPath }),
+
+    saveCustomPrompt: (
+      projectPath: string,
+      data: {
+        title: string;
+        prompt: string;
+        category?: IdeaCategory;
+        isTemplate?: boolean;
+        templateFields?: string[];
+      }
+    ) => this.post('/api/ideation/custom-prompts/save', { projectPath, ...data }),
+
+    updateCustomPrompt: (projectPath: string, promptId: string, updates: Record<string, unknown>) =>
+      this.post('/api/ideation/custom-prompts/update', { projectPath, promptId, updates }),
+
+    deleteCustomPrompt: (projectPath: string, promptId: string) =>
+      this.post('/api/ideation/custom-prompts/delete', { projectPath, promptId }),
+
+    getPromptHistory: (projectPath: string) =>
+      this.post('/api/ideation/prompt-history', { projectPath }),
 
     convertToFeature: (projectPath: string, ideaId: string, options?: ConvertToFeatureOptions) =>
       this.post('/api/ideation/convert', { projectPath, ideaId, ...options }),

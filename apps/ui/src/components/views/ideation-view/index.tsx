@@ -10,8 +10,9 @@ import { PromptCategoryGrid } from './components/prompt-category-grid';
 import { PromptList } from './components/prompt-list';
 import { IdeationDashboard } from './components/ideation-dashboard';
 import { useGuidedPrompts } from '@/hooks/use-guided-prompts';
+import { CustomPromptDialog } from './components/custom-prompt-dialog';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, ChevronRight, Lightbulb, CheckCheck, Trash2 } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Lightbulb, CheckCheck, Trash2, PenLine } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { IdeationSettingsPopover } from './components/ideation-settings-popover';
 import type { IdeaCategory } from '@automaker/types';
@@ -183,6 +184,7 @@ function IdeationHeader({
 export function IdeationView() {
   const currentProject = useAppStore((s) => s.currentProject);
   const { currentMode, selectedCategory, setMode, setCategory } = useIdeationStore();
+  const openCustomPromptDialog = useIdeationStore((s) => s.openCustomPromptDialog);
 
   // Accept all state
   const [acceptAllReady, setAcceptAllReady] = useState(false);
@@ -317,6 +319,21 @@ export function IdeationView() {
       {currentMode === 'prompts' && selectedCategory && (
         <PromptList category={selectedCategory} onBack={handleBackFromPrompts} />
       )}
+
+      {/* FAB for custom prompt - visible on dashboard */}
+      {currentMode === 'dashboard' && (
+        <Button
+          onClick={() => openCustomPromptDialog()}
+          className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg hover:shadow-xl transition-all z-50 gap-0"
+          size="icon"
+          title="Write custom prompt"
+        >
+          <PenLine className="w-6 h-6" />
+        </Button>
+      )}
+
+      {/* Custom prompt dialog */}
+      <CustomPromptDialog />
     </div>
   );
 }

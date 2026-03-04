@@ -38,6 +38,7 @@ import { SandboxRiskDialog } from '@/components/dialogs/sandbox-risk-dialog';
 import { SandboxRejectionScreen } from '@/components/dialogs/sandbox-rejection-screen';
 import { LoadingState } from '@/components/ui/loading-state';
 import { useProjectSettingsLoader } from '@/hooks/use-project-settings-loader';
+import { useProjectRestore } from '@/hooks/use-project-restore';
 import { useIsCompact } from '@/hooks/use-media-query';
 import type { Project } from '@/lib/electron';
 import type { GlobalSettings } from '@automaker/types';
@@ -225,6 +226,8 @@ function RootLayoutContent() {
 
   // Load project settings when switching projects
   useProjectSettingsLoader();
+  // Self-heal currentProject after HMR store resets
+  useProjectRestore();
 
   const isSetupRoute = location.pathname === '/setup';
   const isLoginRoute = location.pathname === '/login';
@@ -338,6 +341,17 @@ function RootLayoutContent() {
       return;
     }
 
+    // Check localStorage for previously acknowledged sandbox warning
+    let localSkip = skipSandboxWarning;
+    if (!localSkip) {
+      try {
+        localSkip =
+          JSON.parse(localStorage.getItem('automaker-skip-sandbox-warning') ?? 'false') === true;
+      } catch {
+        /* ignore */
+      }
+    }
+
     const checkSandbox = async () => {
       try {
         const result = await checkSandboxEnvironment();
@@ -345,7 +359,7 @@ function RootLayoutContent() {
         if (result.isContainerized) {
           // Running in a container, no warning needed
           setSandboxStatus('containerized');
-        } else if (result.skipSandboxWarning || skipSandboxWarning) {
+        } else if (result.skipSandboxWarning || localSkip) {
           // Skip if env var is set OR if user preference is set
           setSandboxStatus('confirmed');
         } else {
@@ -355,7 +369,7 @@ function RootLayoutContent() {
       } catch (error) {
         logger.error('Failed to check environment:', error);
         // On error, assume not containerized and show warning
-        if (skipSandboxWarning) {
+        if (localSkip) {
           setSandboxStatus('confirmed');
         } else {
           setSandboxStatus('needs-confirmation');
@@ -415,8 +429,13 @@ function RootLayoutContent() {
     const handleLoggedOut = () => {
       logger.warn('automaker:logged-out event received!');
       // Only update auth state — the centralized routing effect will handle
-      // navigation to /logged-out when it detects isAuthenticated is false
-      useAuthStore.getState().setAuthState({ isAuthenticated: false, authChecked: true });
+      // navigation to /logged-out when it detects isAuthenticated is false.
+      // Also reset settingsLoaded so the shouldBlockForSettings render gate
+      // blocks the UI until settings are re-loaded after re-authentication,
+      // preventing "No project selected" flash.
+      useAuthStore
+        .getState()
+        .setAuthState({ isAuthenticated: false, authChecked: true, settingsLoaded: false });
     };
 
     window.addEventListener('automaker:logged-out', handleLoggedOut);
@@ -431,7 +450,11 @@ function RootLayoutContent() {
   useEffect(() => {
     const handleServerOffline = () => {
       logger.warn('automaker:server-offline event received!');
-      useAuthStore.getState().setAuthState({ isAuthenticated: false, authChecked: true });
+      // Reset settingsLoaded so the render gate blocks until settings are
+      // re-loaded after the server comes back and the user re-authenticates.
+      useAuthStore
+        .getState()
+        .setAuthState({ isAuthenticated: false, authChecked: true, settingsLoaded: false });
 
       // Navigate to login - the login page will detect server is offline and show appropriate UI
       if (location.pathname !== '/login' && location.pathname !== '/logged-out') {

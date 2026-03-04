@@ -106,7 +106,39 @@ export interface IdeationPrompt {
   description: string;
   prompt: string;
   icon?: string;
+  isCustom?: boolean;
 }
+
+// ============================================================================
+// Custom Prompts
+// ============================================================================
+
+export interface CustomIdeationPrompt {
+  id: string;
+  title: string;
+  prompt: string;
+  category?: IdeaCategory;
+  isTemplate: boolean;
+  templateFields?: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CustomPromptHistoryEntry {
+  id: string;
+  customPromptId?: string;
+  promptText: string;
+  category?: IdeaCategory;
+  usedAt: string;
+  suggestionsCount: number;
+}
+
+export interface EnhancePromptResult {
+  original: string;
+  enhanced: string;
+}
+
+export type EnhancePromptIntensity = 'refine' | 'expand';
 
 // ============================================================================
 // Project Analysis

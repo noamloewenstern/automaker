@@ -131,6 +131,8 @@ const SETTINGS_FIELDS_TO_SYNC = [
   'codexEnableImages',
   'codexAdditionalDirs',
   'codexThreadId',
+  // Sandbox warning
+  'skipSandboxWarning',
   // Max Turns Setting
   'defaultMaxTurns',
   // UI State (previously in localStorage)

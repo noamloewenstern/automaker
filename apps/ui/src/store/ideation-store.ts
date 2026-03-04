@@ -12,6 +12,7 @@ import type {
   AnalysisSuggestion,
   ProjectAnalysisResult,
   IdeationContextSources,
+  CustomIdeationPrompt,
 } from '@automaker/types';
 import { DEFAULT_IDEATION_CONTEXT_SOURCES } from '@automaker/types';
 
@@ -64,8 +65,16 @@ interface IdeationState {
   selectedCategory: IdeaCategory | null;
   filterStatus: IdeaStatus | 'all';
 
+  // Custom prompt dialog
+  customPromptDialogOpen: boolean;
+  customPromptDialogCategory: IdeaCategory | null;
+  customPromptDialogPrefill: CustomIdeationPrompt | null;
+
   // Context sources per project
   contextSourcesByProject: Record<string, Partial<IdeationContextSources>>;
+
+  // Recent template suggestions per field
+  recentTemplateSuggestions: Record<string, string[]>;
 }
 
 // ============================================================================
@@ -115,6 +124,13 @@ interface IdeationActions {
   setCategory: (category: IdeaCategory | null) => void;
   setFilterStatus: (status: IdeaStatus | 'all') => void;
 
+  // Custom prompt dialog
+  openCustomPromptDialog: (
+    category?: IdeaCategory | null,
+    prefill?: CustomIdeationPrompt | null
+  ) => void;
+  closeCustomPromptDialog: () => void;
+
   // Context sources
   /**
    * Returns the effective context-source settings for a project,
@@ -129,6 +145,9 @@ interface IdeationActions {
     key: keyof IdeationContextSources,
     value: boolean
   ) => void;
+
+  // Recent template suggestions
+  addRecentSuggestion: (fieldKey: string, value: string) => void;
 
   // Reset
   reset: () => void;
@@ -155,7 +174,11 @@ const initialState: IdeationState = {
   currentMode: 'dashboard',
   selectedCategory: null,
   filterStatus: 'all',
+  customPromptDialogOpen: false,
+  customPromptDialogCategory: null,
+  customPromptDialogPrefill: null,
   contextSourcesByProject: {},
+  recentTemplateSuggestions: {},
 };
 
 // ============================================================================
@@ -321,6 +344,21 @@ export const useIdeationStore = create<IdeationState & IdeationActions>()(
 
       setFilterStatus: (status) => set({ filterStatus: status }),
 
+      // Custom prompt dialog
+      openCustomPromptDialog: (category, prefill) =>
+        set({
+          customPromptDialogOpen: true,
+          customPromptDialogCategory: category ?? null,
+          customPromptDialogPrefill: prefill ?? null,
+        }),
+
+      closeCustomPromptDialog: () =>
+        set({
+          customPromptDialogOpen: false,
+          customPromptDialogCategory: null,
+          customPromptDialogPrefill: null,
+        }),
+
       // Context sources
       getContextSources: (projectPath) => {
         const state = get();
@@ -339,6 +377,19 @@ export const useIdeationStore = create<IdeationState & IdeationActions>()(
           },
         })),
 
+      // Recent template suggestions
+      addRecentSuggestion: (fieldKey, value) =>
+        set((state) => {
+          const existing = state.recentTemplateSuggestions[fieldKey] || [];
+          const deduped = [value, ...existing.filter((v) => v !== value)].slice(0, 20);
+          return {
+            recentTemplateSuggestions: {
+              ...state.recentTemplateSuggestions,
+              [fieldKey]: deduped,
+            },
+          };
+        }),
+
       // Reset
       reset: () => set(initialState),
 
@@ -352,7 +403,7 @@ export const useIdeationStore = create<IdeationState & IdeationActions>()(
     }),
     {
       name: 'automaker-ideation-store',
-      version: 5,
+      version: 6,
       partialize: (state) => ({
         // Only persist these fields
         ideas: state.ideas,
@@ -360,6 +411,7 @@ export const useIdeationStore = create<IdeationState & IdeationActions>()(
         analysisResult: state.analysisResult,
         filterStatus: state.filterStatus,
         contextSourcesByProject: state.contextSourcesByProject,
+        recentTemplateSuggestions: state.recentTemplateSuggestions,
       }),
       migrate: (persistedState: unknown, version: number) => {
         const state = persistedState as Record<string, unknown>;
@@ -376,6 +428,12 @@ export const useIdeationStore = create<IdeationState & IdeationActions>()(
           return {
             ...state,
             contextSourcesByProject: state.contextSourcesByProject ?? {},
+          };
+        }
+        if (version < 6) {
+          return {
+            ...state,
+            recentTemplateSuggestions: state.recentTemplateSuggestions ?? {},
           };
         }
         return state;

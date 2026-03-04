@@ -17,6 +17,9 @@ import {
 import { Spinner } from '@/components/ui/spinner';
 import { Card, CardContent } from '@/components/ui/card';
 import { useGuidedPrompts } from '@/hooks/use-guided-prompts';
+import { useIdeationStore } from '@/store/ideation-store';
+import { CustomPromptCard } from './custom-prompt-card';
+import { MyPromptsSection } from './my-prompts-section';
 import type { IdeaCategory } from '@automaker/types';
 
 interface PromptCategoryGridProps {
@@ -38,6 +41,7 @@ const iconMap: Record<string, typeof Zap> = {
 
 export function PromptCategoryGrid({ onSelect, onBack }: PromptCategoryGridProps) {
   const { categories, isLoading, error } = useGuidedPrompts();
+  const openCustomPromptDialog = useIdeationStore((s) => s.openCustomPromptDialog);
 
   return (
     <div className="flex-1 flex flex-col p-6 overflow-auto">
@@ -63,32 +67,40 @@ export function PromptCategoryGrid({ onSelect, onBack }: PromptCategoryGridProps
           </div>
         )}
         {!isLoading && !error && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {categories.map((category) => {
-              const Icon = iconMap[category.icon] || Zap;
-              return (
-                <Card
-                  key={category.id}
-                  className="group cursor-pointer transition-all duration-300 hover:border-primary hover:shadow-lg hover:-translate-y-1"
-                  onClick={() => onSelect(category.id)}
-                >
-                  <CardContent className="p-6">
-                    <div className="flex flex-col items-center text-center gap-4">
-                      <div className="p-4 rounded-2xl bg-primary/10 text-primary group-hover:bg-primary/20 group-hover:scale-110 transition-all duration-300">
-                        <Icon className="w-8 h-8" />
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {categories.map((category) => {
+                const Icon = iconMap[category.icon] || Zap;
+                return (
+                  <Card
+                    key={category.id}
+                    className="group cursor-pointer transition-all duration-300 hover:border-primary hover:shadow-lg hover:-translate-y-1"
+                    onClick={() => onSelect(category.id)}
+                  >
+                    <CardContent className="p-6">
+                      <div className="flex flex-col items-center text-center gap-4">
+                        <div className="p-4 rounded-2xl bg-primary/10 text-primary group-hover:bg-primary/20 group-hover:scale-110 transition-all duration-300">
+                          <Icon className="w-8 h-8" />
+                        </div>
+                        <div className="space-y-2">
+                          <h3 className="font-semibold text-lg leading-tight group-hover:text-primary transition-colors">
+                            {category.name}
+                          </h3>
+                          <p className="text-muted-foreground text-sm">{category.description}</p>
+                        </div>
                       </div>
-                      <div className="space-y-2">
-                        <h3 className="font-semibold text-lg leading-tight group-hover:text-primary transition-colors">
-                          {category.name}
-                        </h3>
-                        <p className="text-muted-foreground text-sm">{category.description}</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+
+              {/* Custom Prompt card */}
+              <CustomPromptCard onClick={() => openCustomPromptDialog()} />
+            </div>
+
+            {/* My Prompts section */}
+            <MyPromptsSection />
+          </>
         )}
       </div>
     </div>

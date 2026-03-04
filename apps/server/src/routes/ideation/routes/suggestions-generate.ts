@@ -25,15 +25,22 @@ export function createSuggestionsGenerateHandler(ideationService: IdeationServic
         return;
       }
 
-      if (!promptId) {
-        res.status(400).json({ success: false, error: 'promptId is required' });
+      const { customPromptText } = req.body;
+
+      if (!promptId && !customPromptText) {
+        res.status(400).json({ success: false, error: 'promptId or customPromptText is required' });
         return;
       }
 
-      if (!category) {
-        res.status(400).json({ success: false, error: 'category is required' });
+      if (customPromptText && customPromptText.length > 10000) {
+        res
+          .status(400)
+          .json({ success: false, error: 'Custom prompt text must be 10000 characters or less' });
         return;
       }
+
+      // Category defaults to 'feature' for custom prompts
+      const resolvedCategory = category || 'feature';
 
       // Default to 10 suggestions, allow 1-20
       const suggestionCount = Math.min(Math.max(count || 10, 1), 20);
@@ -42,10 +49,11 @@ export function createSuggestionsGenerateHandler(ideationService: IdeationServic
 
       const suggestions = await ideationService.generateSuggestions(
         projectPath,
-        promptId,
-        category,
+        promptId || null,
+        resolvedCategory,
         suggestionCount,
-        contextSources as IdeationContextSources | undefined
+        contextSources as IdeationContextSources | undefined,
+        customPromptText
       );
 
       res.json({

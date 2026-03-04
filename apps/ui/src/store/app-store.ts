@@ -265,12 +265,74 @@ function getInitialUIState(): {
 
 const cachedUI = getInitialUIState();
 
+/**
+ * Pre-fill projects and currentProject from localStorage cache at module load time.
+ * This runs synchronously before React renders, preventing the "No project selected"
+ * flash that occurs because getInitialAuthState() in auth-store.ts marks
+ * settingsLoaded=true (bypassing the render gate) before the useEffect-based
+ * hydrateStoreFromSettings() has a chance to populate the app store.
+ */
+function getInitialProjectState(): {
+  projects: Project[];
+  currentProject: Project | null;
+  projectHistory: string[];
+  projectHistoryIndex: number;
+} {
+  try {
+    const raw = localStorage.getItem('automaker-settings-cache');
+    if (raw) {
+      const parsed = JSON.parse(raw) as {
+        projects?: Array<Record<string, unknown>>;
+        currentProjectId?: string | null;
+        projectHistory?: string[];
+        projectHistoryIndex?: number;
+      };
+      if (parsed?.projects && Array.isArray(parsed.projects) && parsed.projects.length > 0) {
+        // Map raw cached data to Project objects (minimal transform)
+        const projects: Project[] = parsed.projects.map((ref) => ({
+          id: ref.id as string,
+          name: ref.name as string,
+          path: ref.path as string,
+          lastOpened: ref.lastOpened as string | undefined,
+          isFavorite: ref.isFavorite as boolean | undefined,
+          icon: ref.icon as string | undefined,
+          customIconPath: ref.customIconPath as string | undefined,
+          theme: ref.theme as string | undefined,
+          fontSans: ref.fontSans as string | undefined,
+          fontMono: ref.fontMono as string | undefined,
+          claudeApiProfileId: ref.claudeApiProfileId as string | null | undefined,
+          phaseModelOverrides: ref.phaseModelOverrides as Record<string, unknown> | undefined,
+          defaultFeatureModel: ref.defaultFeatureModel as Record<string, unknown> | undefined,
+          features: [], // Features are loaded separately when project is opened
+        })) as Project[];
+
+        let currentProject: Project | null = null;
+        if (parsed.currentProjectId) {
+          currentProject = projects.find((p) => p.id === parsed.currentProjectId) ?? null;
+        }
+
+        return {
+          projects,
+          currentProject,
+          projectHistory: parsed.projectHistory ?? [],
+          projectHistoryIndex: parsed.projectHistoryIndex ?? -1,
+        };
+      }
+    }
+  } catch {
+    // fall through to defaults
+  }
+  return { projects: [], currentProject: null, projectHistory: [], projectHistoryIndex: -1 };
+}
+
+const cachedProjects = getInitialProjectState();
+
 const initialState: AppState = {
-  projects: [],
-  currentProject: null,
+  projects: cachedProjects.projects,
+  currentProject: cachedProjects.currentProject,
   trashedProjects: [],
-  projectHistory: [],
-  projectHistoryIndex: -1,
+  projectHistory: cachedProjects.projectHistory,
+  projectHistoryIndex: cachedProjects.projectHistoryIndex,
   currentView: 'welcome',
   sidebarOpen: cachedUI.sidebarOpen,
   sidebarStyle: cachedUI.sidebarStyle,
@@ -1500,6 +1562,12 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
   },
   setSkipSandboxWarning: async (skip) => {
     set({ skipSandboxWarning: skip });
+    // Persist to localStorage for immediate reads before server settings load
+    try {
+      localStorage.setItem('automaker-skip-sandbox-warning', JSON.stringify(skip));
+    } catch {
+      /* ignore storage errors */
+    }
     try {
       const httpApi = getHttpApiClient();
       await httpApi.settings.updateGlobal({ skipSandboxWarning: skip });

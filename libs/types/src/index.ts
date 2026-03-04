@@ -348,6 +348,10 @@ export type {
   IdeationStreamEvent,
   IdeationAnalysisEvent,
   IdeationContextSources,
+  CustomIdeationPrompt,
+  CustomPromptHistoryEntry,
+  EnhancePromptResult,
+  EnhancePromptIntensity,
 } from './ideation.js';
 export { DEFAULT_IDEATION_CONTEXT_SOURCES } from './ideation.js';
 

@@ -41,6 +41,9 @@ export {
   getIdeationDraftsDir,
   getIdeationAnalysisPath,
   ensureIdeationDir,
+  getCustomPromptsDir,
+  getCustomPromptPath,
+  getPromptHistoryPath,
 } from './paths.js';
 
 // Subprocess management

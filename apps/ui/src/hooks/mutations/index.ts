@@ -68,7 +68,13 @@ export {
 } from './use-github-mutations';
 
 // Ideation mutations
-export { useGenerateIdeationSuggestions } from './use-ideation-mutations';
+export {
+  useGenerateIdeationSuggestions,
+  useEnhancePrompt,
+  useSaveCustomPrompt,
+  useUpdateCustomPrompt,
+  useDeleteCustomPrompt,
+} from './use-ideation-mutations';
 
 // Spec mutations
 export {

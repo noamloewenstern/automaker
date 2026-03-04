@@ -24,6 +24,8 @@ import type {
   PromptCategory,
   IdeationPrompt,
   IdeationContextSources,
+  CustomIdeationPrompt,
+  CustomPromptHistoryEntry,
 } from '@automaker/types';
 import { DEFAULT_IDEATION_CONTEXT_SOURCES } from '@automaker/types';
 import {
@@ -35,6 +37,9 @@ import {
   getIdeationAnalysisPath,
   getAppSpecPath,
   ensureIdeationDir,
+  getCustomPromptsDir,
+  getCustomPromptPath,
+  getPromptHistoryPath,
 } from '@automaker/platform';
 import { extractXmlElements, extractImplementedFeatures } from '../lib/xml-extractor.js';
 import { createLogger, loadContextFiles, isAbortError } from '@automaker/utils';
@@ -644,25 +649,55 @@ export class IdeationService {
   // ============================================================================
 
   /**
-   * Generate structured suggestions for a prompt
-   * Returns parsed suggestions that can be directly added to the board
+   * Generate structured suggestions for a prompt.
+   * Returns parsed suggestions that can be directly added to the board.
+   *
+   * When both `customPromptText` and `promptId` are provided, `customPromptText`
+   * takes priority and `promptId` is ignored for prompt resolution.
+   * Custom prompt usage (via either parameter) is recorded in prompt history.
    */
   async generateSuggestions(
     projectPath: string,
-    promptId: string,
+    promptId: string | null,
     category: IdeaCategory,
     count: number = 10,
-    contextSources?: IdeationContextSources
+    contextSources?: IdeationContextSources,
+    customPromptText?: string
   ): Promise<AnalysisSuggestion[]> {
     const suggestionCount = Math.min(Math.max(Math.floor(count ?? 10), 1), 20);
     // Merge with defaults for backward compatibility
     const sources = { ...DEFAULT_IDEATION_CONTEXT_SOURCES, ...contextSources };
     validateWorkingDirectory(projectPath);
 
-    // Get the prompt
-    const prompt = this.getAllPrompts().find((p) => p.id === promptId);
-    if (!prompt) {
-      throw new Error(`Prompt ${promptId} not found`);
+    // Resolve prompt text
+    let promptText: string;
+    let promptTitle: string;
+
+    if (customPromptText) {
+      // Use custom prompt text directly
+      promptText = customPromptText;
+      promptTitle = 'Custom prompt';
+    } else if (promptId && promptId.startsWith('custom-')) {
+      // Load saved custom prompt from disk
+      if (promptId.includes('..') || promptId.includes('/') || promptId.includes('\\')) {
+        throw new Error('Invalid prompt ID');
+      }
+      const customPrompt = await this.getCustomPrompt(projectPath, promptId);
+      if (!customPrompt) {
+        throw new Error(`Custom prompt ${promptId} not found`);
+      }
+      promptText = customPrompt.prompt;
+      promptTitle = customPrompt.title;
+    } else if (promptId) {
+      // Look up predefined prompt
+      const prompt = this.getAllPrompts().find((p) => p.id === promptId);
+      if (!prompt) {
+        throw new Error(`Prompt ${promptId} not found`);
+      }
+      promptText = prompt.prompt;
+      promptTitle = prompt.title;
+    } else {
+      throw new Error('Either promptId or customPromptText is required');
     }
 
     // Emit start event
@@ -756,7 +791,7 @@ export class IdeationService {
       const bareModel = stripProviderPrefix(modelId);
 
       const executeOptions: ExecuteOptions = {
-        prompt: prompt.prompt,
+        prompt: promptText,
         model: bareModel,
         originalModel: modelId,
         cwd: projectPath,
@@ -794,6 +829,21 @@ export class IdeationService {
         category,
         suggestionCount
       );
+
+      // Track custom prompt usage in history
+      if (customPromptText || (promptId && promptId.startsWith('custom-'))) {
+        try {
+          await this.addToPromptHistory(projectPath, {
+            customPromptId: promptId?.startsWith('custom-') ? promptId : undefined,
+            promptText: promptText,
+            category,
+            usedAt: new Date().toISOString(),
+            suggestionsCount: suggestions.length,
+          });
+        } catch (error) {
+          logger.warn('Failed to save prompt history:', error);
+        }
+      }
 
       // Emit complete event
       this.events.emit('ideation:suggestions', {
@@ -1877,6 +1927,293 @@ ${contextSection}${existingWorkSection}`;
     } catch {
       return null;
     }
+  }
+
+  // ============================================================================
+  // Custom Prompts
+  // ============================================================================
+
+  async saveCustomPrompt(
+    projectPath: string,
+    input: {
+      title: string;
+      prompt: string;
+      category?: IdeaCategory;
+      isTemplate?: boolean;
+      templateFields?: string[];
+    }
+  ): Promise<CustomIdeationPrompt> {
+    validateWorkingDirectory(projectPath);
+    await ensureIdeationDir(projectPath);
+
+    const id = this.generateId('custom');
+    const now = new Date().toISOString();
+
+    const customPrompt: CustomIdeationPrompt = {
+      id,
+      title: input.title,
+      prompt: input.prompt,
+      category: input.category,
+      isTemplate: input.isTemplate ?? false,
+      templateFields: input.templateFields,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    const dir = getCustomPromptsDir(projectPath);
+    await secureFs.mkdir(dir, { recursive: true });
+    await secureFs.writeFile(
+      getCustomPromptPath(projectPath, id),
+      JSON.stringify(customPrompt, null, 2),
+      'utf-8'
+    );
+
+    return customPrompt;
+  }
+
+  async listCustomPrompts(projectPath: string): Promise<CustomIdeationPrompt[]> {
+    validateWorkingDirectory(projectPath);
+    try {
+      const dir = getCustomPromptsDir(projectPath);
+      try {
+        await secureFs.access(dir);
+      } catch {
+        return [];
+      }
+
+      const files = await secureFs.readdir(dir);
+      const prompts: CustomIdeationPrompt[] = [];
+
+      for (const file of files) {
+        if (typeof file === 'string' && file.endsWith('.json')) {
+          try {
+            const content = (await secureFs.readFile(path.join(dir, file), 'utf-8')) as string;
+            prompts.push(JSON.parse(content));
+          } catch (error) {
+            logger.warn(`Failed to load custom prompt ${file}:`, error);
+          }
+        }
+      }
+
+      return prompts.sort(
+        (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+      );
+    } catch (error) {
+      logger.error('Failed to list custom prompts:', error);
+      return [];
+    }
+  }
+
+  async getCustomPrompt(
+    projectPath: string,
+    promptId: string
+  ): Promise<CustomIdeationPrompt | null> {
+    validateWorkingDirectory(projectPath);
+    if (promptId.includes('..') || promptId.includes('/') || promptId.includes('\\')) {
+      throw new Error('Invalid prompt ID');
+    }
+    try {
+      const content = (await secureFs.readFile(
+        getCustomPromptPath(projectPath, promptId),
+        'utf-8'
+      )) as string;
+      return JSON.parse(content);
+    } catch {
+      return null;
+    }
+  }
+
+  async updateCustomPrompt(
+    projectPath: string,
+    promptId: string,
+    updates: Partial<
+      Pick<CustomIdeationPrompt, 'title' | 'prompt' | 'category' | 'isTemplate' | 'templateFields'>
+    >
+  ): Promise<CustomIdeationPrompt | null> {
+    validateWorkingDirectory(projectPath);
+    if (promptId.includes('..') || promptId.includes('/') || promptId.includes('\\')) {
+      throw new Error('Invalid prompt ID');
+    }
+    const existing = await this.getCustomPrompt(projectPath, promptId);
+    if (!existing) return null;
+
+    const updated: CustomIdeationPrompt = {
+      ...existing,
+      ...updates,
+      updatedAt: new Date().toISOString(),
+    };
+
+    await secureFs.writeFile(
+      getCustomPromptPath(projectPath, promptId),
+      JSON.stringify(updated, null, 2),
+      'utf-8'
+    );
+
+    return updated;
+  }
+
+  async deleteCustomPrompt(projectPath: string, promptId: string): Promise<boolean> {
+    validateWorkingDirectory(projectPath);
+    if (promptId.includes('..') || promptId.includes('/') || promptId.includes('\\')) {
+      throw new Error('Invalid prompt ID');
+    }
+    try {
+      const promptPath = getCustomPromptPath(projectPath, promptId);
+      await secureFs.unlink(promptPath);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  // ============================================================================
+  // Prompt History
+  // ============================================================================
+
+  async getPromptHistory(projectPath: string): Promise<CustomPromptHistoryEntry[]> {
+    validateWorkingDirectory(projectPath);
+    try {
+      const historyPath = getPromptHistoryPath(projectPath);
+      const content = (await secureFs.readFile(historyPath, 'utf-8')) as string;
+      return JSON.parse(content);
+    } catch {
+      return [];
+    }
+  }
+
+  async addToPromptHistory(
+    projectPath: string,
+    entry: Omit<CustomPromptHistoryEntry, 'id'>
+  ): Promise<void> {
+    validateWorkingDirectory(projectPath);
+    await ensureIdeationDir(projectPath);
+    const history = await this.getPromptHistory(projectPath);
+    const newEntry: CustomPromptHistoryEntry = {
+      ...entry,
+      id: this.generateId('history'),
+    };
+    history.unshift(newEntry); // newest first
+    // Keep last 100 entries
+    const trimmed = history.slice(0, 100);
+    await secureFs.writeFile(
+      getPromptHistoryPath(projectPath),
+      JSON.stringify(trimmed, null, 2),
+      'utf-8'
+    );
+  }
+
+  // ============================================================================
+  // Enhance Prompt
+  // ============================================================================
+
+  async enhancePrompt(
+    projectPath: string,
+    promptText: string,
+    category?: IdeaCategory,
+    intensity: 'refine' | 'expand' = 'refine',
+    contextSources?: IdeationContextSources,
+    customSystemPrompt?: string
+  ): Promise<{ original: string; enhanced: string }> {
+    validateWorkingDirectory(projectPath);
+
+    // Merge context sources with defaults
+    const sources = { ...DEFAULT_IDEATION_CONTEXT_SOURCES, ...contextSources };
+
+    // Load project context (same pattern as generateSuggestions)
+    let projectContext = '';
+    try {
+      const contextResult = await loadContextFiles({
+        projectPath,
+        fsModule: secureFs as Parameters<typeof loadContextFiles>[0]['fsModule'],
+        includeContextFiles: sources.useContextFiles,
+        includeMemory: sources.useMemoryFiles,
+      });
+      projectContext = contextResult.formattedPrompt;
+
+      if (sources.useAppSpec) {
+        const appSpecContext = await this.buildAppSpecContext(projectPath);
+        if (appSpecContext) {
+          projectContext = projectContext
+            ? `${projectContext}\n\n${appSpecContext}`
+            : appSpecContext;
+        }
+      }
+    } catch {
+      // Continue without project context if loading fails
+    }
+
+    const categoryContext = category ? `\nThe ideas should be in the "${category}" category.` : '';
+
+    const projectContextSection = projectContext
+      ? `\n\n## Project Context\n${projectContext}\n\nUse this project context to make the enhanced prompt specific to this project's architecture, tech stack, and existing features. Don't just improve the wording — ground it in the actual project.`
+      : '';
+
+    let systemPrompt: string;
+    if (customSystemPrompt) {
+      systemPrompt = customSystemPrompt;
+    } else if (intensity === 'expand') {
+      systemPrompt = `You are a prompt engineering expert. Expand the following prompt into a comprehensive, well-structured AI agent prompt with sections for Goal, Requirements, Constraints, and Acceptance Criteria. Add implementation details grounded in the project context.${categoryContext}${projectContextSection}\n\nReturn the improved prompt formatted in markdown with clear structure:\n- Use ## headings for major sections (Goal, Requirements, Constraints, etc.)\n- Use bullet points for lists\n- Be specific and actionable — this prompt will be given to an AI coding agent to implement\n- Structure it as a well-crafted AI agent prompt, not as a general description`;
+    } else {
+      systemPrompt = `You are a prompt engineering expert. Improve clarity, specificity, and wording of the following prompt. Keep the same scope and length. Make it more actionable and detailed for an AI coding agent.${categoryContext}${projectContextSection}\n\nReturn the improved prompt formatted in markdown with clear structure:\n- Use ## headings for major sections if appropriate\n- Use bullet points for lists\n- Be specific and actionable — this prompt will be given to an AI coding agent to implement`;
+    }
+
+    // Get model - use a fast model for enhancement
+    const phaseResult = await getPhaseModelWithOverrides(
+      'ideationModel',
+      this.settingsService,
+      projectPath,
+      '[IdeationService:enhancePrompt]'
+    );
+    const resolved = resolvePhaseModel(phaseResult.phaseModel);
+    const modelId = resolved.model;
+    const claudeCompatibleProvider = phaseResult.provider;
+    const credentials = phaseResult.credentials;
+    const enhanceClaudeCodeExecutablePath = await getClaudeCodeExecutablePath(this.settingsService);
+    const enhanceClaudeCodeExtraArgs = await getClaudeCodeExtraArgs(this.settingsService);
+    const enhanceClaudeCodeEnvVars = await getClaudeCodeEnvVars(this.settingsService);
+
+    const sdkOptions = createChatOptions({
+      cwd: projectPath,
+      model: modelId,
+      systemPrompt,
+      abortController: new AbortController(),
+    });
+
+    const provider = ProviderFactory.getProviderForModel(modelId);
+    const bareModel = stripProviderPrefix(modelId);
+
+    const executeOptions: ExecuteOptions = {
+      prompt: promptText,
+      model: bareModel,
+      originalModel: modelId,
+      cwd: projectPath,
+      systemPrompt: sdkOptions.systemPrompt,
+      maxTurns: 1,
+      allowedTools: [],
+      abortController: new AbortController(),
+      readOnly: true,
+      claudeCompatibleProvider,
+      credentials,
+      claudeCodeExecutablePath: enhanceClaudeCodeExecutablePath,
+      claudeCodeExtraArgs: enhanceClaudeCodeExtraArgs,
+      claudeCodeEnvVars: enhanceClaudeCodeEnvVars,
+    };
+
+    const stream = provider.executeQuery(executeOptions);
+    let responseText = '';
+    for await (const msg of stream) {
+      if (msg.type === 'assistant' && msg.message?.content) {
+        for (const block of msg.message.content) {
+          if (block.type === 'text') {
+            responseText += block.text;
+          }
+        }
+      } else if (msg.type === 'result' && msg.subtype === 'success' && msg.result) {
+        responseText = msg.result;
+      }
+    }
+
+    return { original: promptText, enhanced: responseText.trim() };
   }
 
   private generateId(prefix: string): string {

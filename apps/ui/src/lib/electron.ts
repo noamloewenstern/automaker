@@ -36,6 +36,9 @@ import type {
   Feature,
   IdeationStreamEvent,
   IdeationAnalysisEvent,
+  CustomIdeationPrompt,
+  CustomPromptHistoryEntry,
+  EnhancePromptResult,
 } from '@automaker/types';
 import { DEFAULT_MAX_CONCURRENCY } from '@automaker/types';
 import { getJSON, setJSON, removeItem } from './storage';
@@ -68,6 +71,9 @@ export type {
   CreateIdeaInput,
   UpdateIdeaInput,
   ConvertToFeatureOptions,
+  CustomIdeationPrompt,
+  CustomPromptHistoryEntry,
+  EnhancePromptResult,
 };
 
 // Ideation API interface
@@ -121,11 +127,53 @@ export interface IdeationAPI {
   // Generate suggestions from a prompt
   generateSuggestions: (
     projectPath: string,
-    promptId: string,
+    promptId: string | null,
     category: IdeaCategory,
     count?: number,
-    contextSources?: IdeationContextSources
+    contextSources?: IdeationContextSources,
+    customPromptText?: string
   ) => Promise<{ success: boolean; suggestions?: AnalysisSuggestion[]; error?: string }>;
+
+  // Enhance a custom prompt
+  enhancePrompt: (
+    projectPath: string,
+    promptText: string,
+    category?: IdeaCategory,
+    intensity?: 'refine' | 'expand',
+    contextSources?: IdeationContextSources,
+    customSystemPrompt?: string
+  ) => Promise<{ success: boolean; original?: string; enhanced?: string; error?: string }>;
+
+  // Custom prompts CRUD
+  listCustomPrompts: (
+    projectPath: string
+  ) => Promise<{ success: boolean; prompts?: CustomIdeationPrompt[]; error?: string }>;
+  saveCustomPrompt: (
+    projectPath: string,
+    data: {
+      title: string;
+      prompt: string;
+      category?: IdeaCategory;
+      isTemplate?: boolean;
+      templateFields?: string[];
+    }
+  ) => Promise<{ success: boolean; prompt?: CustomIdeationPrompt; error?: string }>;
+  updateCustomPrompt: (
+    projectPath: string,
+    promptId: string,
+    updates: Partial<
+      Pick<CustomIdeationPrompt, 'title' | 'prompt' | 'category' | 'isTemplate' | 'templateFields'>
+    >
+  ) => Promise<{ success: boolean; prompt?: CustomIdeationPrompt; error?: string }>;
+  deleteCustomPrompt: (
+    projectPath: string,
+    promptId: string
+  ) => Promise<{ success: boolean; error?: string }>;
+
+  // Prompt history
+  getPromptHistory: (
+    projectPath: string
+  ) => Promise<{ success: boolean; history?: CustomPromptHistoryEntry[]; error?: string }>;
 
   // Convert to feature
   convertToFeature: (
