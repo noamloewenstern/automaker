@@ -114,3 +114,5 @@ data/
 .mcp.json
 .planning
 .bg-shell/
+.playwright-cli/
+0*.png
