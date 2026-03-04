@@ -49,6 +49,7 @@ const SYSTEM_ENV_VARS = [
   'XDG_DATA_HOME',
   'XDG_CACHE_HOME',
   'XDG_STATE_HOME',
+  'CLAUDE_CONFIG_DIR',
 ];
 
 /**

@@ -77,6 +77,8 @@ export function getClaudeCliPaths(): string[] {
   return [
     path.join(os.homedir(), '.local', 'bin', 'claude'),
     path.join(os.homedir(), '.claude', 'local', 'claude'),
+    // Bun global
+    path.join(os.homedir(), '.bun', 'bin', 'claude'),
     '/usr/local/bin/claude',
     path.join(os.homedir(), '.npm-global', 'bin', 'claude'),
   ];
@@ -168,6 +170,8 @@ export function getCodexCliPaths(): string[] {
   return [
     // Standard locations
     path.join(homeDir, '.local', 'bin', 'codex'),
+    // Bun global
+    path.join(homeDir, '.bun', 'bin', 'codex'),
     '/opt/homebrew/bin/codex',
     '/usr/local/bin/codex',
     '/usr/bin/codex',

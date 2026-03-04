@@ -1,7 +1,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { ClaudeProvider } from '@/providers/claude-provider.js';
+import { ClaudeProvider } from '@/providers/claude-provider';
 import * as sdk from '@anthropic-ai/claude-agent-sdk';
+import type { Query } from '@anthropic-ai/claude-agent-sdk';
 import { collectAsyncGenerator } from '../../utils/helpers.js';
+
+/** Cast an async generator to the SDK Query type for mocking */
+function asQuery(gen: AsyncGenerator): Query {
+  return gen as unknown as Query;
+}
 
 vi.mock('@anthropic-ai/claude-agent-sdk');
 
@@ -41,11 +47,13 @@ describe('claude-provider.ts', () => {
       ];
 
       vi.mocked(sdk.query).mockReturnValue(
-        (async function* () {
-          for (const msg of mockMessages) {
-            yield msg;
-          }
-        })()
+        asQuery(
+          (async function* () {
+            for (const msg of mockMessages) {
+              yield msg;
+            }
+          })()
+        )
       );
 
       const generator = provider.executeQuery({
@@ -63,9 +71,11 @@ describe('claude-provider.ts', () => {
 
     it('should pass correct options to SDK', async () => {
       vi.mocked(sdk.query).mockReturnValue(
-        (async function* () {
-          yield { type: 'text', text: 'test' };
-        })()
+        asQuery(
+          (async function* () {
+            yield { type: 'text', text: 'test' };
+          })()
+        )
       );
 
       const generator = provider.executeQuery({
@@ -95,9 +105,11 @@ describe('claude-provider.ts', () => {
 
     it('should not include allowedTools when not specified (caller decides via sdk-options)', async () => {
       vi.mocked(sdk.query).mockReturnValue(
-        (async function* () {
-          yield { type: 'text', text: 'test' };
-        })()
+        asQuery(
+          (async function* () {
+            yield { type: 'text', text: 'test' };
+          })()
+        )
       );
 
       const generator = provider.executeQuery({
@@ -118,9 +130,11 @@ describe('claude-provider.ts', () => {
 
     it('should pass abortController if provided', async () => {
       vi.mocked(sdk.query).mockReturnValue(
-        (async function* () {
-          yield { type: 'text', text: 'test' };
-        })()
+        asQuery(
+          (async function* () {
+            yield { type: 'text', text: 'test' };
+          })()
+        )
       );
 
       const abortController = new AbortController();
@@ -144,9 +158,11 @@ describe('claude-provider.ts', () => {
 
     it('should handle conversation history with sdkSessionId using resume option', async () => {
       vi.mocked(sdk.query).mockReturnValue(
-        (async function* () {
-          yield { type: 'text', text: 'test' };
-        })()
+        asQuery(
+          (async function* () {
+            yield { type: 'text', text: 'test' };
+          })()
+        )
       );
 
       const conversationHistory = [
@@ -175,9 +191,11 @@ describe('claude-provider.ts', () => {
 
     it('should handle array prompt (with images)', async () => {
       vi.mocked(sdk.query).mockReturnValue(
-        (async function* () {
-          yield { type: 'text', text: 'test' };
-        })()
+        asQuery(
+          (async function* () {
+            yield { type: 'text', text: 'test' };
+          })()
+        )
       );
 
       const arrayPrompt = [
@@ -200,9 +218,11 @@ describe('claude-provider.ts', () => {
 
     it('should use maxTurns default of 1000', async () => {
       vi.mocked(sdk.query).mockReturnValue(
-        (async function* () {
-          yield { type: 'text', text: 'test' };
-        })()
+        asQuery(
+          (async function* () {
+            yield { type: 'text', text: 'test' };
+          })()
+        )
       );
 
       const generator = provider.executeQuery({
@@ -223,9 +243,11 @@ describe('claude-provider.ts', () => {
 
     it('should pass pathToClaudeCodeExecutable when claudeCompatibleProvider has claudeCodeExecutablePath', async () => {
       vi.mocked(sdk.query).mockReturnValue(
-        (async function* () {
-          yield { type: 'text', text: 'test' };
-        })()
+        asQuery(
+          (async function* () {
+            yield { type: 'text', text: 'test' };
+          })()
+        )
       );
 
       const generator = provider.executeQuery({
@@ -256,9 +278,11 @@ describe('claude-provider.ts', () => {
 
     it('should not include pathToClaudeCodeExecutable when claudeCodeExecutablePath is not set', async () => {
       vi.mocked(sdk.query).mockReturnValue(
-        (async function* () {
-          yield { type: 'text', text: 'test' };
-        })()
+        asQuery(
+          (async function* () {
+            yield { type: 'text', text: 'test' };
+          })()
+        )
       );
 
       const generator = provider.executeQuery({
@@ -288,9 +312,11 @@ describe('claude-provider.ts', () => {
 
     it('should pass pathToClaudeCodeExecutable from global claudeCodeExecutablePath option when no provider config', async () => {
       vi.mocked(sdk.query).mockReturnValue(
-        (async function* () {
-          yield { type: 'text', text: 'test' };
-        })()
+        asQuery(
+          (async function* () {
+            yield { type: 'text', text: 'test' };
+          })()
+        )
       );
 
       const generator = provider.executeQuery({
@@ -312,9 +338,11 @@ describe('claude-provider.ts', () => {
 
     it('should prefer provider-specific claudeCodeExecutablePath over global option', async () => {
       vi.mocked(sdk.query).mockReturnValue(
-        (async function* () {
-          yield { type: 'text', text: 'test' };
-        })()
+        asQuery(
+          (async function* () {
+            yield { type: 'text', text: 'test' };
+          })()
+        )
       );
 
       const generator = provider.executeQuery({
@@ -346,9 +374,11 @@ describe('claude-provider.ts', () => {
 
     it('should forward global claudeCodeExtraArgs as extraArgs to SDK', async () => {
       vi.mocked(sdk.query).mockReturnValue(
-        (async function* () {
-          yield { type: 'text', text: 'test' };
-        })()
+        asQuery(
+          (async function* () {
+            yield { type: 'text', text: 'test' };
+          })()
+        )
       );
 
       const generator = provider.executeQuery({
@@ -370,9 +400,11 @@ describe('claude-provider.ts', () => {
 
     it('should merge provider-specific extraArgs over global extraArgs', async () => {
       vi.mocked(sdk.query).mockReturnValue(
-        (async function* () {
-          yield { type: 'text', text: 'test' };
-        })()
+        asQuery(
+          (async function* () {
+            yield { type: 'text', text: 'test' };
+          })()
+        )
       );
 
       const generator = provider.executeQuery({
@@ -404,9 +436,11 @@ describe('claude-provider.ts', () => {
 
     it('should merge global claudeCodeEnvVars into env', async () => {
       vi.mocked(sdk.query).mockReturnValue(
-        (async function* () {
-          yield { type: 'text', text: 'test' };
-        })()
+        asQuery(
+          (async function* () {
+            yield { type: 'text', text: 'test' };
+          })()
+        )
       );
 
       const generator = provider.executeQuery({
@@ -431,9 +465,11 @@ describe('claude-provider.ts', () => {
 
     it('should merge provider-specific envVars over global envVars', async () => {
       vi.mocked(sdk.query).mockReturnValue(
-        (async function* () {
-          yield { type: 'text', text: 'test' };
-        })()
+        asQuery(
+          (async function* () {
+            yield { type: 'text', text: 'test' };
+          })()
+        )
       );
 
       const generator = provider.executeQuery({
@@ -466,14 +502,47 @@ describe('claude-provider.ts', () => {
       });
     });
 
+    it('should propagate CLAUDE_CONFIG_DIR from process.env as a system var', async () => {
+      process.env.CLAUDE_CONFIG_DIR = '/custom/config/dir';
+
+      vi.mocked(sdk.query).mockReturnValue(
+        asQuery(
+          (async function* () {
+            yield { type: 'text', text: 'test' };
+          })()
+        )
+      );
+
+      const generator = provider.executeQuery({
+        prompt: 'Test',
+        model: 'claude-opus-4-6',
+        cwd: '/test',
+      });
+
+      await collectAsyncGenerator(generator);
+
+      expect(sdk.query).toHaveBeenCalledWith({
+        prompt: 'Test',
+        options: expect.objectContaining({
+          env: expect.objectContaining({
+            CLAUDE_CONFIG_DIR: '/custom/config/dir',
+          }),
+        }),
+      });
+
+      delete process.env.CLAUDE_CONFIG_DIR;
+    });
+
     it('should handle errors during execution and rethrow', async () => {
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       const testError = new Error('SDK execution failed');
 
       vi.mocked(sdk.query).mockReturnValue(
-        (async function* () {
-          throw testError;
-        })()
+        asQuery(
+          (async function* () {
+            throw testError;
+          })()
+        )
       );
 
       const generator = provider.executeQuery({
@@ -535,9 +604,11 @@ describe('claude-provider.ts', () => {
       process.env.ANTHROPIC_BASE_URL = 'https://custom.example.com/v1';
 
       vi.mocked(sdk.query).mockReturnValue(
-        (async function* () {
-          yield { type: 'text', text: 'test' };
-        })()
+        asQuery(
+          (async function* () {
+            yield { type: 'text', text: 'test' };
+          })()
+        )
       );
 
       const generator = provider.executeQuery({
@@ -562,9 +633,11 @@ describe('claude-provider.ts', () => {
       process.env.ANTHROPIC_AUTH_TOKEN = 'custom-auth-token';
 
       vi.mocked(sdk.query).mockReturnValue(
-        (async function* () {
-          yield { type: 'text', text: 'test' };
-        })()
+        asQuery(
+          (async function* () {
+            yield { type: 'text', text: 'test' };
+          })()
+        )
       );
 
       const generator = provider.executeQuery({
@@ -590,9 +663,11 @@ describe('claude-provider.ts', () => {
       process.env.ANTHROPIC_AUTH_TOKEN = 'gateway-token';
 
       vi.mocked(sdk.query).mockReturnValue(
-        (async function* () {
-          yield { type: 'text', text: 'test' };
-        })()
+        asQuery(
+          (async function* () {
+            yield { type: 'text', text: 'test' };
+          })()
+        )
       );
 
       const generator = provider.executeQuery({
