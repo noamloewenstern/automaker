@@ -31,6 +31,15 @@ import { formatModelName, DEFAULT_MODEL } from '@/lib/agent-context-parser';
 import { DeleteConfirmDialog } from '@/components/ui/delete-confirm-dialog';
 import { getProviderIconForModel } from '@/components/ui/provider-icon';
 import { useAppStore } from '@/store/app-store';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { isDeleteConfirmSkipped, setDeleteConfirmSkip } from '@/lib/delete-confirm-skip';
 
 function DuplicateMenuItems({
   onDuplicate,
@@ -153,13 +162,22 @@ export const CardHeaderSection = memo(function CardHeaderSection({
     }),
     [feature.providerId, claudeCompatibleProviders]
   );
+  const [skipConfirmChecked, setSkipConfirmChecked] = useState(false);
+  const [skipMinutes, setSkipMinutes] = useState(15);
 
   const handleDeleteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setIsDeleteDialogOpen(true);
+    if (isDeleteConfirmSkipped()) {
+      onDelete();
+    } else {
+      setIsDeleteDialogOpen(true);
+    }
   };
 
   const handleConfirmDelete = () => {
+    if (skipConfirmChecked) {
+      setDeleteConfirmSkip(skipMinutes);
+    }
     onDelete();
   };
 
@@ -560,7 +578,32 @@ export const CardHeaderSection = memo(function CardHeaderSection({
         description="Are you sure you want to delete this feature? This action cannot be undone."
         testId="delete-confirmation-dialog"
         confirmTestId="confirm-delete-button"
-      />
+      >
+        <div className="flex items-center gap-2 pt-2">
+          <Checkbox
+            id="skip-delete-confirm"
+            checked={skipConfirmChecked}
+            onCheckedChange={(checked) => setSkipConfirmChecked(checked === true)}
+          />
+          <label
+            htmlFor="skip-delete-confirm"
+            className="text-sm text-muted-foreground cursor-pointer"
+          >
+            Don't ask again for
+          </label>
+          <Select value={String(skipMinutes)} onValueChange={(v) => setSkipMinutes(Number(v))}>
+            <SelectTrigger className="w-[110px] h-7 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="5">5 minutes</SelectItem>
+              <SelectItem value="15">15 minutes</SelectItem>
+              <SelectItem value="30">30 minutes</SelectItem>
+              <SelectItem value="60">1 hour</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </DeleteConfirmDialog>
     </CardHeader>
   );
 });
