@@ -7,8 +7,21 @@ import {
   useEnhancePrompt,
   useSaveCustomPrompt,
 } from '@/hooks/mutations';
-import type { IdeaCategory, IdeationPrompt, CustomIdeationPrompt } from '@automaker/types';
-import { assembleTemplatePrompt, type PromptMode } from '../constants';
+import type {
+  IdeaCategory,
+  IdeationPrompt,
+  CustomIdeationPrompt,
+  EnhancePromptIntensity,
+} from '@automaker/types';
+import {
+  assembleTemplatePrompt,
+  TEMPLATE_CATEGORIES,
+  SURPRISE_PROMPTS,
+  type PromptMode,
+  type PromptPattern,
+} from '../constants';
+
+export type { PromptMode };
 
 export interface CustomPromptFormState {
   promptMode: PromptMode;
@@ -19,7 +32,7 @@ export interface CustomPromptFormState {
   saveTitle: string;
   enhancedPrompt: string | null;
   showEnhanceComparison: boolean;
-  intensity: 'refine' | 'expand';
+  intensity: EnhancePromptIntensity;
   showSystemPrompt: boolean;
   customSystemPrompt: string;
 }
@@ -34,10 +47,20 @@ function getSavedPromptMode(): PromptMode {
   return 'freetext';
 }
 
+function buildInitialTemplateFields(): Record<string, string> {
+  const fields: Record<string, string> = {};
+  for (const cat of TEMPLATE_CATEGORIES) {
+    for (const field of cat.fields) {
+      fields[field.key] = '';
+    }
+  }
+  return fields;
+}
+
 const initialFormState: CustomPromptFormState = {
   promptMode: getSavedPromptMode(),
   promptText: '',
-  templateFields: { topic: '', focus: '', audience: '', context: '', braindump: '' },
+  templateFields: buildInitialTemplateFields(),
   category: '',
   saveForLater: false,
   saveTitle: '',
@@ -88,7 +111,7 @@ export function useCustomPromptForm() {
         setFormState({
           promptMode: prefill.isTemplate ? 'template' : 'freetext',
           promptText: prefill.isTemplate ? '' : prefill.prompt,
-          templateFields: { topic: '', focus: '', audience: '', context: '', braindump: '' },
+          templateFields: buildInitialTemplateFields(),
           category: prefill.category ?? '',
           saveForLater: true,
           saveTitle: prefill.title,
@@ -101,6 +124,7 @@ export function useCustomPromptForm() {
       } else {
         setFormState({
           ...initialFormState,
+          templateFields: buildInitialTemplateFields(),
           category: category ?? '',
         });
       }
@@ -172,6 +196,36 @@ export function useCustomPromptForm() {
     closeCustomPromptDialog();
   }, [closeCustomPromptDialog]);
 
+  const applyPattern = useCallback((pattern: PromptPattern) => {
+    if (pattern.id === 'surprise') {
+      const random = SURPRISE_PROMPTS[Math.floor(Math.random() * SURPRISE_PROMPTS.length)];
+      setFormState((prev) => ({
+        ...prev,
+        promptMode: 'freetext' as PromptMode,
+        promptText: random,
+      }));
+      return;
+    }
+
+    if (pattern.mode === 'template' && pattern.templateFields) {
+      setFormState((prev) => ({
+        ...prev,
+        promptMode: 'template' as PromptMode,
+        promptText: '',
+        templateFields: {
+          ...prev.templateFields,
+          ...pattern.templateFields,
+        },
+      }));
+    } else {
+      setFormState((prev) => ({
+        ...prev,
+        promptMode: 'freetext' as PromptMode,
+        promptText: pattern.prompt,
+      }));
+    }
+  }, []);
+
   const handleGenerate = useCallback(() => {
     if (!canGenerate || !projectPath || isSubmitting) return;
 
@@ -241,5 +295,6 @@ export function useCustomPromptForm() {
     handleGenerate,
     handleClose,
     resetForm,
+    applyPattern,
   };
 }

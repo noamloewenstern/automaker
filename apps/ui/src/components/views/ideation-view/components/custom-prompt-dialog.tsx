@@ -2,7 +2,7 @@
  * CustomPromptDialog - Modal for creating and managing custom prompts
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -24,137 +24,332 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Accordion,
+  AccordionItem,
+  AccordionTrigger,
+  AccordionContent,
+} from '@/components/ui/accordion';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Spinner } from '@/components/ui/spinner';
-import { Sparkles, Lightbulb, Undo2, Check, Dices, ChevronDown, ChevronUp } from 'lucide-react';
+import { Markdown } from '@/components/ui/markdown';
+import {
+  Sparkles,
+  Lightbulb,
+  Undo2,
+  Check,
+  ChevronDown,
+  ChevronUp,
+  BookOpen,
+  Copy,
+  Maximize2,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIdeationStore } from '@/store/ideation-store';
 import { useCustomPromptForm, type CustomPromptFormState } from '../hooks/use-custom-prompt-form';
+import { TemplateFieldRenderer } from './template-field-renderer';
 import {
-  CORE_TEMPLATE_FIELDS,
-  ADDITIONAL_TEMPLATE_FIELDS,
+  TEMPLATE_CATEGORIES,
   CATEGORY_OPTIONS,
   ENHANCE_SYSTEM_PROMPTS,
-  SURPRISE_PROMPTS,
   PROMPT_MAX_LENGTH,
-  TEMPLATE_FIELDS,
+  PROMPT_QUALITY_DIMENSIONS,
+  PROMPT_PATTERNS,
   type PromptMode,
 } from '../constants';
-import type { IdeaCategory } from '@automaker/types';
+import type { IdeaCategory, EnhancePromptIntensity } from '@automaker/types';
 
 // ============================================================================
 // Helpers
 // ============================================================================
 
-const EMPTY_SUGGESTIONS: string[] = [];
+const PREVIEW_MODE_KEY = 'ideation-prompt-preview-mode';
 
-function getPromptQuality(text: string): {
-  label: string;
-  color: string;
-  variant: 'destructive' | 'warning' | 'success' | 'info';
-} {
-  const words = text.trim().split(/\s+/).filter(Boolean);
-  const wordCount = words.length;
-  const hasSpecifics =
-    /\b(api|component|database|auth|endpoint|route|hook|service|modal|form|table|button|page|dashboard)\b/i.test(
-      text
-    );
-
-  if (wordCount < 10) return { label: 'Weak', color: 'destructive', variant: 'destructive' };
-  if (wordCount < 30 || (!hasSpecifics && wordCount < 50))
-    return { label: 'Basic', color: 'warning', variant: 'warning' };
-  if (wordCount >= 50 && hasSpecifics)
-    return { label: 'Excellent', color: 'info', variant: 'info' };
-  return { label: 'Good', color: 'success', variant: 'success' };
+function getPreviewPreference(): boolean {
+  try {
+    return localStorage.getItem(PREVIEW_MODE_KEY) === 'true';
+  } catch {
+    return false;
+  }
 }
 
-function PromptQualityIndicator({ text }: { text: string }) {
-  if (!text.trim()) return null;
-  const quality = getPromptQuality(text);
+function setPreviewPreference(preview: boolean) {
+  try {
+    localStorage.setItem(PREVIEW_MODE_KEY, String(preview));
+  } catch {}
+}
+
+// ============================================================================
+// PromptViewer - Reusable prompt display with Raw/Preview, Copy, Expand
+// ============================================================================
+
+interface PromptViewerProps {
+  content: string;
+  editable?: boolean;
+  onChange?: (value: string) => void;
+  className?: string;
+  previewMode: boolean;
+  onPreviewModeChange: (preview: boolean) => void;
+}
+
+function PromptViewer({
+  content,
+  editable,
+  onChange,
+  className,
+  previewMode,
+  onPreviewModeChange,
+}: PromptViewerProps) {
+  const [copied, setCopied] = useState(false);
+  const [largeViewOpen, setLargeViewOpen] = useState(false);
+
+  const handleCopy = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(content);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {}
+  }, [content]);
+
   return (
-    <div className="flex items-center gap-2">
-      <div className="h-1.5 flex-1 rounded-full bg-muted overflow-hidden">
-        <div
-          className={cn(
-            'h-full rounded-full transition-all duration-300',
-            quality.variant === 'destructive' && 'w-1/4 bg-destructive',
-            quality.variant === 'warning' && 'w-2/4 bg-[var(--status-warning)]',
-            quality.variant === 'success' && 'w-3/4 bg-[var(--status-success)]',
-            quality.variant === 'info' && 'w-full bg-[var(--status-info)]'
-          )}
-        />
+    <>
+      <div className={cn('space-y-1.5', className)}>
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex rounded-md border overflow-hidden">
+            <button
+              type="button"
+              className={cn(
+                'px-2.5 py-1 text-xs font-medium transition-colors',
+                !previewMode ? 'bg-primary text-primary-foreground' : 'bg-background hover:bg-muted'
+              )}
+              onClick={() => onPreviewModeChange(false)}
+            >
+              Raw
+            </button>
+            <button
+              type="button"
+              className={cn(
+                'px-2.5 py-1 text-xs font-medium transition-colors',
+                previewMode ? 'bg-primary text-primary-foreground' : 'bg-background hover:bg-muted'
+              )}
+              onClick={() => onPreviewModeChange(true)}
+            >
+              Preview
+            </button>
+          </div>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={handleCopy}
+              title="Copy to clipboard"
+            >
+              {copied ? (
+                <Check className="w-3.5 h-3.5 text-green-500" />
+              ) : (
+                <Copy className="w-3.5 h-3.5" />
+              )}
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => setLargeViewOpen(true)}
+              title="Expand to full view"
+            >
+              <Maximize2 className="w-3.5 h-3.5" />
+            </Button>
+          </div>
+        </div>
+        {previewMode ? (
+          <div className="max-h-[200px] overflow-y-auto p-3 rounded-md border bg-muted/30 text-sm prose-sm">
+            <Markdown>{content}</Markdown>
+          </div>
+        ) : editable && onChange ? (
+          <Textarea
+            value={content}
+            onChange={(e) => onChange(e.target.value)}
+            rows={8}
+            className="resize-y border-primary/30 bg-primary/5"
+          />
+        ) : (
+          <div className="max-h-[200px] overflow-y-auto p-3 rounded-md border bg-muted/50 text-sm whitespace-pre-wrap">
+            {content}
+          </div>
+        )}
       </div>
-      <Badge variant={quality.variant} size="sm">
-        {quality.label}
-      </Badge>
-    </div>
+      <PromptLargeViewDialog
+        open={largeViewOpen}
+        onOpenChange={setLargeViewOpen}
+        content={content}
+        previewMode={previewMode}
+        onPreviewModeChange={onPreviewModeChange}
+      />
+    </>
   );
 }
 
-function SuggestionChips({
-  fieldKey,
-  currentValue,
-  onValueChange,
+function PromptLargeViewDialog({
+  open,
+  onOpenChange,
+  content,
+  previewMode,
+  onPreviewModeChange,
 }: {
-  fieldKey: string;
-  currentValue: string;
-  onValueChange: (value: string) => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  content: string;
+  previewMode: boolean;
+  onPreviewModeChange: (preview: boolean) => void;
 }) {
-  const [showAll, setShowAll] = useState(false);
-  const recentSuggestions = useIdeationStore(
-    (s) => s.recentTemplateSuggestions[fieldKey] ?? EMPTY_SUGGESTIONS
-  );
-  const addRecentSuggestion = useIdeationStore((s) => s.addRecentSuggestion);
+  const [copied, setCopied] = useState(false);
 
-  const field = TEMPLATE_FIELDS.find((f) => f.key === fieldKey);
-  if (!field?.suggestions) return null;
-
-  // Merge recent first, then defaults, deduped
-  const allSuggestions = [...new Set([...recentSuggestions, ...field.suggestions])];
-  const displaySuggestions = showAll ? allSuggestions : allSuggestions.slice(0, 12);
-
-  // Parse current comma-separated values
-  const selectedValues = currentValue
-    .split(',')
-    .map((v) => v.trim().toLowerCase())
-    .filter(Boolean);
-
-  const isSelected = (suggestion: string) => selectedValues.includes(suggestion.toLowerCase());
-
-  const toggleSuggestion = (suggestion: string) => {
-    if (isSelected(suggestion)) {
-      // Remove
-      const newValues = selectedValues.filter((v) => v !== suggestion.toLowerCase());
-      onValueChange(newValues.join(', '));
-    } else {
-      // Add
-      const newValues = [...selectedValues, suggestion];
-      onValueChange(newValues.join(', '));
-      addRecentSuggestion(fieldKey, suggestion);
-    }
-  };
+  const handleCopy = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(content);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {}
+  }, [content]);
 
   return (
-    <div className="space-y-1.5">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
+        noDefaultMaxWidth
+        className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col"
+      >
+        <DialogHeader>
+          <DialogTitle>Prompt Preview</DialogTitle>
+        </DialogHeader>
+        <div className="flex items-center justify-between gap-2 mb-2">
+          <div className="flex rounded-md border overflow-hidden">
+            <button
+              type="button"
+              className={cn(
+                'px-3 py-1.5 text-xs font-medium transition-colors',
+                !previewMode ? 'bg-primary text-primary-foreground' : 'bg-background hover:bg-muted'
+              )}
+              onClick={() => onPreviewModeChange(false)}
+            >
+              Raw
+            </button>
+            <button
+              type="button"
+              className={cn(
+                'px-3 py-1.5 text-xs font-medium transition-colors',
+                previewMode ? 'bg-primary text-primary-foreground' : 'bg-background hover:bg-muted'
+              )}
+              onClick={() => onPreviewModeChange(true)}
+            >
+              Preview
+            </button>
+          </div>
+          <Button variant="ghost" size="sm" className="gap-1.5" onClick={handleCopy}>
+            {copied ? (
+              <Check className="w-3.5 h-3.5 text-green-500" />
+            ) : (
+              <Copy className="w-3.5 h-3.5" />
+            )}
+            {copied ? 'Copied' : 'Copy'}
+          </Button>
+        </div>
+        <div className="flex-1 overflow-y-auto p-4 border rounded-md">
+          {previewMode ? (
+            <Markdown>{content}</Markdown>
+          ) : (
+            <pre className="whitespace-pre-wrap text-sm">{content}</pre>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function PromptQualityChecklist({
+  text,
+  onInsertSnippet,
+}: {
+  text: string;
+  onInsertSnippet?: (snippet: string) => void;
+}) {
+  if (!text.trim()) return null;
+
+  const results = PROMPT_QUALITY_DIMENSIONS.map((dim) => ({
+    ...dim,
+    passed: dim.check(text),
+  }));
+  const passCount = results.filter((r) => r.passed).length;
+  const total = results.length;
+  const ratio = passCount / total;
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-2">
+        <div className="h-1.5 flex-1 rounded-full bg-muted overflow-hidden">
+          <div
+            className={cn(
+              'h-full rounded-full transition-all duration-300',
+              ratio <= 0.25 && 'bg-destructive',
+              ratio > 0.25 && ratio <= 0.5 && 'bg-[var(--status-warning)]',
+              ratio > 0.5 && ratio < 1 && 'bg-[var(--status-success)]',
+              ratio === 1 && 'bg-[var(--status-info)]'
+            )}
+            style={{ width: `${ratio * 100}%` }}
+          />
+        </div>
+        <Badge
+          variant={
+            ratio <= 0.25
+              ? 'destructive'
+              : ratio <= 0.5
+                ? 'warning'
+                : ratio < 1
+                  ? 'success'
+                  : 'info'
+          }
+          size="sm"
+        >
+          {passCount}/{total}
+        </Badge>
+      </div>
       <div className="flex flex-wrap gap-1.5">
-        {displaySuggestions.map((suggestion) => (
+        {results.map((dim) => (
           <Badge
-            key={suggestion}
-            variant={isSelected(suggestion) ? 'default' : 'outline'}
-            className="cursor-pointer hover:opacity-80 transition-opacity"
-            onClick={() => toggleSuggestion(suggestion)}
+            key={dim.key}
+            variant={dim.passed ? 'default' : 'outline'}
+            className={cn(
+              'text-xs transition-opacity',
+              !dim.passed &&
+                onInsertSnippet &&
+                dim.insertSnippet &&
+                'cursor-pointer hover:opacity-80'
+            )}
+            title={dim.passed ? dim.label : dim.tip}
+            onClick={() => {
+              if (!dim.passed && onInsertSnippet && dim.insertSnippet) {
+                onInsertSnippet(dim.insertSnippet);
+              }
+            }}
           >
-            {suggestion}
+            {dim.passed ? (
+              <>
+                <Check className="w-3 h-3 mr-0.5" />
+                {dim.label}
+              </>
+            ) : (
+              dim.label
+            )}
           </Badge>
         ))}
       </div>
-      {allSuggestions.length > 12 && (
-        <button
-          type="button"
-          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-          onClick={() => setShowAll(!showAll)}
-        >
-          {showAll ? 'Show less' : `Show ${allSuggestions.length - 12} more`}
-        </button>
+      {results.some((r) => !r.passed) && (
+        <p className="text-xs text-muted-foreground">{results.find((r) => !r.passed)?.tip}</p>
       )}
     </div>
   );
@@ -170,17 +365,53 @@ interface FormProps {
   effectivePrompt: string;
 }
 
+const SECTIONS_EXPANDED_KEY = 'ideation-template-sections-expanded';
+const DEFAULT_EXPANDED = ['who-and-why'];
+
+function getSavedExpandedSections(): string[] {
+  try {
+    const saved = localStorage.getItem(SECTIONS_EXPANDED_KEY);
+    if (saved) return JSON.parse(saved) as string[];
+  } catch {}
+  return DEFAULT_EXPANDED;
+}
+
+function saveExpandedSections(sections: string[]) {
+  try {
+    localStorage.setItem(SECTIONS_EXPANDED_KEY, JSON.stringify(sections));
+  } catch {}
+}
+
+function categoryHasContent(categoryId: string, fields: Record<string, string>): boolean {
+  const cat = TEMPLATE_CATEGORIES.find((c) => c.id === categoryId);
+  if (!cat) return false;
+  return cat.fields.some((f) => fields[f.key]?.trim());
+}
+
 function PromptModeSelector({ formState, setFormState, effectivePrompt }: FormProps) {
   const [debouncedPreview, setDebouncedPreview] = useState(effectivePrompt);
-  const [showAdditionalContext, setShowAdditionalContext] = useState(false);
+  const [expandedSections, setExpandedSections] = useState<string[]>(getSavedExpandedSections);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedPreview(effectivePrompt), 300);
     return () => clearTimeout(timer);
   }, [effectivePrompt]);
 
-  const hasAdditionalContent =
-    !!formState.templateFields.context?.trim() || !!formState.templateFields.braindump?.trim();
+  const handleAccordionChange = (value: string | string[]) => {
+    const sections = Array.isArray(value) ? value : [value].filter(Boolean);
+    setExpandedSections(sections);
+    saveExpandedSections(sections);
+  };
+
+  const coreCategory = TEMPLATE_CATEGORIES.find((c) => c.alwaysVisible);
+  const accordionCategories = TEMPLATE_CATEGORIES.filter((c) => !c.alwaysVisible);
+
+  const handleFieldChange = (key: string, value: string) => {
+    setFormState((prev) => ({
+      ...prev,
+      templateFields: { ...prev.templateFields, [key]: value },
+    }));
+  };
 
   return (
     <Tabs
@@ -212,79 +443,71 @@ function PromptModeSelector({ formState, setFormState, effectivePrompt }: FormPr
           maxLength={PROMPT_MAX_LENGTH}
         />
         <div className="flex items-center justify-between">
-          <PromptQualityIndicator text={formState.promptText} />
           <span className="text-xs text-muted-foreground">
             {formState.promptText.length} / {PROMPT_MAX_LENGTH.toLocaleString()}
           </span>
         </div>
+        <PromptQualityChecklist
+          text={formState.promptText}
+          onInsertSnippet={(snippet) =>
+            setFormState((prev) => ({ ...prev, promptText: prev.promptText + snippet }))
+          }
+        />
       </TabsContent>
 
       <TabsContent value="template" className="mt-3 space-y-3">
-        {CORE_TEMPLATE_FIELDS.map((field) => (
+        {/* Core fields (always visible, not in accordion) */}
+        {coreCategory?.fields.map((field) => (
           <div key={field.key} className="space-y-1">
             <Label className="text-sm font-medium">{field.label}</Label>
-            <Input
+            <TemplateFieldRenderer
+              field={field}
               value={formState.templateFields[field.key] || ''}
-              onChange={(e) =>
-                setFormState((prev) => ({
-                  ...prev,
-                  templateFields: { ...prev.templateFields, [field.key]: e.target.value },
-                }))
-              }
-              placeholder={field.placeholder}
-            />
-            <SuggestionChips
-              fieldKey={field.key}
-              currentValue={formState.templateFields[field.key] || ''}
-              onValueChange={(value) =>
-                setFormState((prev) => ({
-                  ...prev,
-                  templateFields: { ...prev.templateFields, [field.key]: value },
-                }))
-              }
+              onChange={(value) => handleFieldChange(field.key, value)}
             />
           </div>
         ))}
 
-        {/* Collapsible Additional Context section */}
-        <div className="space-y-2">
-          <button
-            type="button"
-            className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-            onClick={() => setShowAdditionalContext(!showAdditionalContext)}
-          >
-            {showAdditionalContext ? (
-              <ChevronUp className="w-3.5 h-3.5" />
-            ) : (
-              <ChevronDown className="w-3.5 h-3.5" />
-            )}
-            Additional Context
-            {hasAdditionalContent && !showAdditionalContext && (
-              <span className="w-1.5 h-1.5 rounded-full bg-primary" />
-            )}
-          </button>
-          {showAdditionalContext && (
-            <div className="space-y-3 pl-1">
-              {ADDITIONAL_TEMPLATE_FIELDS.map((field) => (
-                <div key={field.key} className="space-y-1">
-                  <Label className="text-sm font-medium">{field.label}</Label>
-                  <Textarea
-                    value={formState.templateFields[field.key] || ''}
-                    onChange={(e) =>
-                      setFormState((prev) => ({
-                        ...prev,
-                        templateFields: { ...prev.templateFields, [field.key]: e.target.value },
-                      }))
-                    }
-                    placeholder={field.placeholder}
-                    rows={3}
-                    className="resize-y"
-                  />
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        {/* Expandable category groups */}
+        <Accordion type="multiple" value={expandedSections} onValueChange={handleAccordionChange}>
+          {accordionCategories.map((category) => {
+            const hasContent = categoryHasContent(category.id, formState.templateFields);
+            return (
+              <AccordionItem key={category.id} value={category.id} className="border-b-0">
+                <AccordionTrigger className="py-2.5 text-sm hover:no-underline">
+                  <span className="flex items-center gap-2">
+                    {category.label}
+                    {category.description && (
+                      <span className="text-xs text-muted-foreground font-normal hidden sm:inline">
+                        {category.description}
+                      </span>
+                    )}
+                    {hasContent && !expandedSections.includes(category.id) && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
+                    )}
+                  </span>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <div className="space-y-3 pl-1">
+                    {category.fields.map((field) => (
+                      <div key={field.key} className="space-y-1">
+                        <Label className="text-sm font-medium">{field.label}</Label>
+                        {field.description && (
+                          <p className="text-xs text-muted-foreground">{field.description}</p>
+                        )}
+                        <TemplateFieldRenderer
+                          field={field}
+                          value={formState.templateFields[field.key] || ''}
+                          onChange={(value) => handleFieldChange(field.key, value)}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            );
+          })}
+        </Accordion>
 
         {debouncedPreview && (
           <div className="p-3 rounded-md bg-muted text-sm text-muted-foreground">
@@ -292,7 +515,7 @@ function PromptModeSelector({ formState, setFormState, effectivePrompt }: FormPr
             <span className="whitespace-pre-wrap">{debouncedPreview}</span>
           </div>
         )}
-        <PromptQualityIndicator text={effectivePrompt} />
+        <PromptQualityChecklist text={effectivePrompt} />
       </TabsContent>
     </Tabs>
   );
@@ -333,8 +556,8 @@ interface EnhanceProps {
   canEnhance: boolean;
   enhanceIsPending: boolean;
   enhanceError: Error | null;
-  intensity: 'refine' | 'expand';
-  onIntensityChange: (intensity: 'refine' | 'expand') => void;
+  intensity: EnhancePromptIntensity;
+  onIntensityChange: (intensity: EnhancePromptIntensity) => void;
   showSystemPrompt: boolean;
   customSystemPrompt: string;
   onToggleSystemPrompt: () => void;
@@ -344,6 +567,12 @@ interface EnhanceProps {
   onAcceptEnhanced: () => void;
   onEnhancedPromptEdit: (value: string) => void;
 }
+
+const INTENSITY_OPTIONS: { value: EnhancePromptIntensity; label: string }[] = [
+  { value: 'refine', label: 'Refine' },
+  { value: 'expand', label: 'Expand' },
+  { value: 'structure', label: 'Structure' },
+];
 
 function EnhancePromptSection({
   showEnhanceComparison,
@@ -363,6 +592,13 @@ function EnhancePromptSection({
   onAcceptEnhanced,
   onEnhancedPromptEdit,
 }: EnhanceProps) {
+  const [previewMode, setPreviewMode] = useState(getPreviewPreference);
+
+  const handlePreviewModeChange = useCallback((preview: boolean) => {
+    setPreviewMode(preview);
+    setPreviewPreference(preview);
+  }, []);
+
   return (
     <>
       {!showEnhanceComparison && (
@@ -373,30 +609,21 @@ function EnhancePromptSection({
               Enhance Prompt
             </Button>
             <div className="flex rounded-md border overflow-hidden">
-              <button
-                type="button"
-                className={cn(
-                  'px-3 py-1.5 text-xs font-medium transition-colors',
-                  intensity === 'refine'
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-background hover:bg-muted'
-                )}
-                onClick={() => onIntensityChange('refine')}
-              >
-                Refine
-              </button>
-              <button
-                type="button"
-                className={cn(
-                  'px-3 py-1.5 text-xs font-medium transition-colors',
-                  intensity === 'expand'
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-background hover:bg-muted'
-                )}
-                onClick={() => onIntensityChange('expand')}
-              >
-                Expand
-              </button>
+              {INTENSITY_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  className={cn(
+                    'px-3 py-1.5 text-xs font-medium transition-colors',
+                    intensity === opt.value
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-background hover:bg-muted'
+                  )}
+                  onClick={() => onIntensityChange(opt.value)}
+                >
+                  {opt.label}
+                </button>
+              ))}
             </div>
           </div>
           {enhanceIsPending && (
@@ -442,6 +669,11 @@ function EnhancePromptSection({
 
       {showEnhanceComparison && enhancedPrompt && (
         <div className="space-y-3">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Badge variant="outline" className="text-xs">
+              Enhanced with {INTENSITY_OPTIONS.find((o) => o.value === intensity)?.label}
+            </Badge>
+          </div>
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <div className="text-xs font-medium text-muted-foreground uppercase">Your Prompt</div>
@@ -450,7 +682,11 @@ function EnhancePromptSection({
                 Use Original
               </Button>
             </div>
-            <div className="p-3 rounded-md border bg-muted/50 text-sm">{effectivePrompt}</div>
+            <PromptViewer
+              content={effectivePrompt}
+              previewMode={previewMode}
+              onPreviewModeChange={handlePreviewModeChange}
+            />
           </div>
           <div className="space-y-2">
             <div className="flex items-center justify-between">
@@ -460,11 +696,12 @@ function EnhancePromptSection({
                 Use Enhanced
               </Button>
             </div>
-            <Textarea
-              value={enhancedPrompt}
-              onChange={(e) => onEnhancedPromptEdit(e.target.value)}
-              rows={8}
-              className="resize-y border-primary/30 bg-primary/5"
+            <PromptViewer
+              content={enhancedPrompt}
+              editable
+              onChange={onEnhancedPromptEdit}
+              previewMode={previewMode}
+              onPreviewModeChange={handlePreviewModeChange}
             />
           </div>
         </div>
@@ -522,23 +759,27 @@ export function CustomPromptDialog() {
           <DialogTitle className="flex items-center gap-2">
             <Lightbulb className="w-5 h-5 text-primary" />
             Custom Prompt
-            <Button
-              variant="ghost"
-              size="sm"
-              className="ml-auto gap-1 text-muted-foreground"
-              onClick={() => {
-                const random =
-                  SURPRISE_PROMPTS[Math.floor(Math.random() * SURPRISE_PROMPTS.length)];
-                form.setFormState((prev) => ({
-                  ...prev,
-                  promptMode: 'freetext' as PromptMode,
-                  promptText: random,
-                }));
-              }}
-            >
-              <Dices className="w-4 h-4" />
-              Surprise me
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="ml-auto gap-1 text-muted-foreground">
+                  <BookOpen className="w-4 h-4" />
+                  Start from...
+                  <ChevronDown className="w-3 h-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-64">
+                {PROMPT_PATTERNS.map((pattern) => (
+                  <DropdownMenuItem
+                    key={pattern.id}
+                    onClick={() => form.applyPattern(pattern)}
+                    className="flex flex-col items-start gap-0.5"
+                  >
+                    <span className="font-medium">{pattern.label}</span>
+                    <span className="text-xs text-muted-foreground">{pattern.description}</span>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </DialogTitle>
         </DialogHeader>
 
