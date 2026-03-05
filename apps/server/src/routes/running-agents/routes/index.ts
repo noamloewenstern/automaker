@@ -6,6 +6,7 @@ import type { Request, Response } from 'express';
 import type { AutoModeServiceCompat } from '../../../services/auto-mode/index.js';
 import { getBacklogPlanStatus, getRunningDetails } from '../../backlog-plan/common.js';
 import { getAllRunningGenerations } from '../../app-spec/common.js';
+import { getAllRunningIdeation } from '../../ideation/common.js';
 import path from 'path';
 import { getErrorMessage, logError } from '../common.js';
 
@@ -55,6 +56,19 @@ export function createIndexHandler(autoModeService: AutoModeServiceCompat) {
           isAutoMode: false,
           title,
           description,
+        });
+      }
+
+      // Add ideation operations (suggestions + analysis)
+      const ideationOperations = getAllRunningIdeation();
+      for (const operation of ideationOperations) {
+        runningAgents.push({
+          featureId: `ideation:${operation.projectPath}:${operation.type}`,
+          projectPath: operation.projectPath,
+          projectName: path.basename(operation.projectPath),
+          isAutoMode: false,
+          title: operation.type === 'suggestions' ? 'Generating ideas' : 'Analyzing project',
+          description: operation.description,
         });
       }
 

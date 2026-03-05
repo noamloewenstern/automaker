@@ -138,7 +138,7 @@ export interface EnhancePromptResult {
   enhanced: string;
 }
 
-export type EnhancePromptIntensity = 'refine' | 'expand';
+export type EnhancePromptIntensity = 'refine' | 'expand' | 'structure';
 
 // ============================================================================
 // Project Analysis

@@ -66,6 +66,41 @@ export function useRunningAgents() {
     return () => unsubscribe();
   }, [queryClient]);
 
+  // Subscribe to ideation suggestion events
+  useEffect(() => {
+    const api = getElectronAPI();
+    if (!api.ideation) return;
+
+    const invalidate = () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.runningAgents.all() });
+    };
+
+    const unsubSuggestions = api.ideation.onSuggestionsEvent((event: unknown) => {
+      const ev = event as { type?: string };
+      logger.debug('Ideation suggestions event for running agents hook', { type: ev.type });
+      if (ev.type === 'started' || ev.type === 'complete' || ev.type === 'error') {
+        invalidate();
+      }
+    });
+
+    const unsubAnalysis = api.ideation.onAnalysisEvent((event) => {
+      const ev = event as { type?: string };
+      logger.debug('Ideation analysis event for running agents hook', { type: ev.type });
+      if (
+        ev.type === 'ideation:analysis-started' ||
+        ev.type === 'ideation:analysis-complete' ||
+        ev.type === 'ideation:analysis-error'
+      ) {
+        invalidate();
+      }
+    });
+
+    return () => {
+      unsubSuggestions();
+      unsubAnalysis();
+    };
+  }, [queryClient]);
+
   return {
     runningAgentsCount: runningAgentsCount ?? 0,
   };

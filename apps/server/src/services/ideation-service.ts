@@ -57,6 +57,7 @@ import {
   getClaudeCodeExtraArgs,
   getClaudeCodeEnvVars,
 } from '../lib/settings-helpers.js';
+import { setIdeationRunning, clearIdeationRunning } from '../routes/ideation/common.js';
 
 const logger = createLogger('IdeationService');
 
@@ -522,6 +523,8 @@ export class IdeationService {
       message: 'Starting project analysis...',
     });
 
+    setIdeationRunning(projectPath, 'analysis', 'Analyzing project structure');
+
     try {
       // Gather project structure
       const structure = await this.gatherProjectStructure(projectPath);
@@ -567,8 +570,10 @@ export class IdeationService {
         result,
       });
 
+      clearIdeationRunning(projectPath, 'analysis');
       return result;
     } catch (error) {
+      clearIdeationRunning(projectPath, 'analysis');
       logger.error('Project analysis failed:', error);
       this.emitAnalysisEvent('ideation:analysis-error', {
         projectPath,
@@ -706,6 +711,8 @@ export class IdeationService {
       promptId,
       category,
     });
+
+    setIdeationRunning(projectPath, 'suggestions', promptTitle);
 
     try {
       // Load context files (respecting toggle settings)
@@ -853,8 +860,10 @@ export class IdeationService {
         suggestions,
       });
 
+      clearIdeationRunning(projectPath, 'suggestions');
       return suggestions;
     } catch (error) {
+      clearIdeationRunning(projectPath, 'suggestions');
       logger.error('Failed to generate suggestions:', error);
       this.events.emit('ideation:suggestions', {
         type: 'error',
@@ -2110,7 +2119,7 @@ ${contextSection}${existingWorkSection}`;
     projectPath: string,
     promptText: string,
     category?: IdeaCategory,
-    intensity: 'refine' | 'expand' = 'refine',
+    intensity: 'refine' | 'expand' | 'structure' = 'refine',
     contextSources?: IdeationContextSources,
     customSystemPrompt?: string
   ): Promise<{ original: string; enhanced: string }> {
@@ -2152,9 +2161,82 @@ ${contextSection}${existingWorkSection}`;
     if (customSystemPrompt) {
       systemPrompt = customSystemPrompt;
     } else if (intensity === 'expand') {
-      systemPrompt = `You are a prompt engineering expert. Expand the following prompt into a comprehensive, well-structured AI agent prompt with sections for Goal, Requirements, Constraints, and Acceptance Criteria. Add implementation details grounded in the project context.${categoryContext}${projectContextSection}\n\nReturn the improved prompt formatted in markdown with clear structure:\n- Use ## headings for major sections (Goal, Requirements, Constraints, etc.)\n- Use bullet points for lists\n- Be specific and actionable — this prompt will be given to an AI coding agent to implement\n- Structure it as a well-crafted AI agent prompt, not as a general description`;
+      systemPrompt = `You are a senior prompt engineer specializing in AI coding agents.
+
+<task>
+Expand the user's prompt into a comprehensive, well-structured specification that an AI coding agent can implement directly.
+</task>
+
+<process>
+Think step by step:
+1. What is the core goal?
+2. What are the functional requirements?
+3. What technical approach makes sense?
+4. What constraints should be explicit?
+5. How will we know it's done?
+</process>
+${categoryContext}${projectContextSection}
+
+<output_format>
+Structure the expanded prompt with these sections:
+## Goal - One clear sentence describing the desired outcome.
+## Requirements - Functional requirements as bullet points, each testable.
+## Technical Approach - Suggested implementation strategy, key components/files.
+## Constraints - What to avoid, performance/size limits, compatibility requirements.
+## Acceptance Criteria - Concrete, verifiable conditions for "done".
+</output_format>
+
+Return ONLY the expanded prompt in markdown. No explanations or commentary.`;
+    } else if (intensity === 'structure') {
+      systemPrompt = `You are a senior prompt engineer specializing in AI coding agents.
+
+<task>
+Reorganize the user's existing prompt content into a well-structured format. Do NOT add new requirements or change the scope — only improve the organization and clarity of what's already there.
+</task>
+
+<process>
+1. Read the entire prompt to understand all requirements mentioned
+2. Group related requirements together
+3. Add clear section headings
+4. Convert prose into actionable bullet points
+5. Add a role definition if missing
+6. Ensure instructions are in logical order (context first, then requirements, then constraints)
+</process>
+${categoryContext}${projectContextSection}
+
+<rules>
+- Preserve ALL original content and requirements — nothing should be lost
+- Do NOT add new features, requirements, or scope
+- Convert vague statements into clearer phrasing using the user's own words
+- Use ## headings, bullet points, and numbered lists for structure
+</rules>
+
+Return ONLY the restructured prompt in markdown. No explanations or commentary.`;
     } else {
-      systemPrompt = `You are a prompt engineering expert. Improve clarity, specificity, and wording of the following prompt. Keep the same scope and length. Make it more actionable and detailed for an AI coding agent.${categoryContext}${projectContextSection}\n\nReturn the improved prompt formatted in markdown with clear structure:\n- Use ## headings for major sections if appropriate\n- Use bullet points for lists\n- Be specific and actionable — this prompt will be given to an AI coding agent to implement`;
+      systemPrompt = `You are a senior prompt engineer specializing in AI coding agents.
+
+<task>
+Polish and clarify the user's prompt. Improve clarity, specificity, and wording while preserving the original scope and intent.
+</task>
+
+<process>
+1. Identify the core intent and scope of the prompt
+2. Add an action verb if missing
+3. Replace vague language with concrete technical terms
+4. Add specificity where the prompt is ambiguous
+5. Ensure the prompt specifies what "good output" looks like
+</process>
+${categoryContext}${projectContextSection}
+
+<rules>
+- Keep approximately the same length — do NOT expand scope
+- Preserve the user's voice and terminology
+- Add concrete details only where the original is vague
+- Format with ## headings and bullet points for clarity
+- Every bullet should be actionable, not descriptive
+</rules>
+
+Return ONLY the improved prompt in markdown. No explanations or commentary.`;
     }
 
     // Get model - use a fast model for enhancement

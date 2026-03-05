@@ -62,6 +62,11 @@ export function RunningAgentsView() {
         }
         return;
       }
+      // Ideation operations are short-lived and don't support stop — just skip
+      if (agent.featureId.startsWith('ideation:')) {
+        logger.debug('Ideation operations cannot be stopped', { featureId: agent.featureId });
+        return;
+      }
       // Use mutation for regular features
       stopFeature.mutate({ featureId: agent.featureId, projectPath: agent.projectPath });
     },
@@ -219,15 +224,17 @@ export function RunningAgentsView() {
                   >
                     View Project
                   </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => handleStopAgent(agent)}
-                    disabled={stopFeature.isPending}
-                  >
-                    <Square className="h-3.5 w-3.5 mr-1.5" />
-                    Stop
-                  </Button>
+                  {!agent.featureId.startsWith('ideation:') && (
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => handleStopAgent(agent)}
+                      disabled={stopFeature.isPending}
+                    >
+                      <Square className="h-3.5 w-3.5 mr-1.5" />
+                      Stop
+                    </Button>
+                  )}
                 </div>
               </div>
             ))}

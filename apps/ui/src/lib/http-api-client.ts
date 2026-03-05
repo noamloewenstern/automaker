@@ -591,6 +591,7 @@ type EventType =
   | 'backlog-plan:event'
   | 'ideation:stream'
   | 'ideation:analysis'
+  | 'ideation:suggestions'
   | 'worktree:init-started'
   | 'worktree:init-output'
   | 'worktree:init-completed'
@@ -3118,7 +3119,7 @@ export class HttpApiClient implements ElectronAPI {
       projectPath: string,
       promptText: string,
       category?: IdeaCategory,
-      intensity?: 'refine' | 'expand',
+      intensity?: 'refine' | 'expand' | 'structure',
       contextSources?: IdeationContextSources,
       customSystemPrompt?: string
     ) =>
@@ -3171,6 +3172,10 @@ export class HttpApiClient implements ElectronAPI {
 
     onAnalysisEvent: (callback: (event: IdeationAnalysisEvent) => void): (() => void) => {
       return this.subscribeToEvent('ideation:analysis', callback as EventCallback);
+    },
+
+    onSuggestionsEvent: (callback: (event: unknown) => void): (() => void) => {
+      return this.subscribeToEvent('ideation:suggestions', callback as EventCallback);
     },
   };
 

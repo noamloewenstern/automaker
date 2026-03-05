@@ -139,7 +139,7 @@ export interface IdeationAPI {
     projectPath: string,
     promptText: string,
     category?: IdeaCategory,
-    intensity?: 'refine' | 'expand',
+    intensity?: 'refine' | 'expand' | 'structure',
     contextSources?: IdeationContextSources,
     customSystemPrompt?: string
   ) => Promise<{ success: boolean; original?: string; enhanced?: string; error?: string }>;
@@ -199,6 +199,7 @@ export interface IdeationAPI {
   // Event subscriptions
   onStream: (callback: (event: IdeationStreamEvent) => void) => () => void;
   onAnalysisEvent: (callback: (event: IdeationAnalysisEvent) => void) => () => void;
+  onSuggestionsEvent: (callback: (event: unknown) => void) => () => void;
 }
 
 export interface FileEntry {

@@ -119,7 +119,7 @@ export function useEnhancePrompt(projectPath: string) {
     mutationFn: async (input: {
       promptText: string;
       category?: IdeaCategory;
-      intensity?: 'refine' | 'expand';
+      intensity?: 'refine' | 'expand' | 'structure';
       customSystemPrompt?: string;
     }) => {
       const api = getElectronAPI();
