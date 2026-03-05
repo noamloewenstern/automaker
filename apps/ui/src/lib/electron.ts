@@ -39,6 +39,7 @@ import type {
   CustomIdeationPrompt,
   CustomPromptHistoryEntry,
   EnhancePromptResult,
+  EnhancePromptOptions,
 } from '@automaker/types';
 import { DEFAULT_MAX_CONCURRENCY } from '@automaker/types';
 import { getJSON, setJSON, removeItem } from './storage';
@@ -136,12 +137,7 @@ export interface IdeationAPI {
 
   // Enhance a custom prompt
   enhancePrompt: (
-    projectPath: string,
-    promptText: string,
-    category?: IdeaCategory,
-    intensity?: 'refine' | 'expand' | 'structure',
-    contextSources?: IdeationContextSources,
-    customSystemPrompt?: string
+    options: EnhancePromptOptions
   ) => Promise<{ success: boolean; original?: string; enhanced?: string; error?: string }>;
 
   // Custom prompts CRUD

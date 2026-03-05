@@ -13,6 +13,10 @@ import {
   Gauge,
   Accessibility,
   BarChart3,
+  HeartPulse,
+  Container,
+  Database,
+  FlaskConical,
 } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { Card, CardContent } from '@/components/ui/card';
@@ -37,6 +41,10 @@ const iconMap: Record<string, typeof Zap> = {
   Gauge,
   Accessibility,
   BarChart3,
+  HeartPulse,
+  Container,
+  Database,
+  FlaskConical,
 };
 
 export function PromptCategoryGrid({ onSelect, onBack }: PromptCategoryGridProps) {

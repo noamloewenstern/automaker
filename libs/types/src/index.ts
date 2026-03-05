@@ -352,6 +352,7 @@ export type {
   CustomPromptHistoryEntry,
   EnhancePromptResult,
   EnhancePromptIntensity,
+  EnhancePromptOptions,
 } from './ideation.js';
 export { DEFAULT_IDEATION_CONTEXT_SOURCES } from './ideation.js';
 

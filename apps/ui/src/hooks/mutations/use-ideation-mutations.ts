@@ -9,7 +9,12 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { getElectronAPI } from '@/lib/electron';
 import { queryKeys } from '@/lib/query-keys';
 import { toast } from 'sonner';
-import type { IdeaCategory, AnalysisSuggestion, CustomIdeationPrompt } from '@automaker/types';
+import type {
+  IdeaCategory,
+  AnalysisSuggestion,
+  CustomIdeationPrompt,
+  EnhancePromptOptions,
+} from '@automaker/types';
 import { useIdeationStore } from '@/store/ideation-store';
 
 /**
@@ -116,12 +121,7 @@ export function useGenerateIdeationSuggestions(projectPath: string) {
  */
 export function useEnhancePrompt(projectPath: string) {
   return useMutation({
-    mutationFn: async (input: {
-      promptText: string;
-      category?: IdeaCategory;
-      intensity?: 'refine' | 'expand' | 'structure';
-      customSystemPrompt?: string;
-    }) => {
+    mutationFn: async (input: Omit<EnhancePromptOptions, 'projectPath' | 'contextSources'>) => {
       const api = getElectronAPI();
       if (!api.ideation?.enhancePrompt) {
         throw new Error('Ideation API not available');
@@ -130,14 +130,11 @@ export function useEnhancePrompt(projectPath: string) {
       // Get context sources from store
       const contextSources = useIdeationStore.getState().getContextSources(projectPath);
 
-      const result = await api.ideation.enhancePrompt(
+      const result = await api.ideation.enhancePrompt({
         projectPath,
-        input.promptText,
-        input.category,
-        input.intensity,
         contextSources,
-        input.customSystemPrompt
-      );
+        ...input,
+      });
 
       if (!result.success) {
         throw new Error(result.error || 'Failed to enhance prompt');

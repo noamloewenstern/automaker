@@ -3,7 +3,10 @@ import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { History } from 'lucide-react';
 import { toast } from 'sonner';
-import { EnhancementMode, ENHANCEMENT_MODE_LABELS } from './enhancement-constants';
+import {
+  EnhancementMode,
+  ENHANCEMENT_MODE_LABELS,
+} from '@/components/shared/enhancement-constants';
 
 /**
  * Base interface for history entries

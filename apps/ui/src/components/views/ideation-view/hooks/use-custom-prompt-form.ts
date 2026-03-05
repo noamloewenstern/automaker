@@ -7,11 +7,13 @@ import {
   useEnhancePrompt,
   useSaveCustomPrompt,
 } from '@/hooks/mutations';
+import { useModelOverride } from '@/components/shared';
 import type {
   IdeaCategory,
   IdeationPrompt,
   CustomIdeationPrompt,
   EnhancePromptIntensity,
+  EnhancementMode,
 } from '@automaker/types';
 import {
   assembleTemplatePrompt,
@@ -33,6 +35,7 @@ export interface CustomPromptFormState {
   enhancedPrompt: string | null;
   showEnhanceComparison: boolean;
   intensity: EnhancePromptIntensity;
+  enhancementMode: EnhancementMode;
   showSystemPrompt: boolean;
   customSystemPrompt: string;
 }
@@ -67,6 +70,7 @@ const initialFormState: CustomPromptFormState = {
   enhancedPrompt: null,
   showEnhanceComparison: false,
   intensity: 'refine' as const,
+  enhancementMode: 'improve' as EnhancementMode,
   showSystemPrompt: false,
   customSystemPrompt: '',
 };
@@ -89,6 +93,9 @@ export function useCustomPromptForm() {
   const saveMutation = useSaveCustomPrompt(projectPath);
 
   const [formState, setFormState] = useState<CustomPromptFormState>(initialFormState);
+
+  // Model override for enhance prompt
+  const modelOverride = useModelOverride({ phase: 'ideationModel' });
 
   const effectivePrompt =
     formState.promptMode === 'template'
@@ -118,6 +125,7 @@ export function useCustomPromptForm() {
           enhancedPrompt: null,
           showEnhanceComparison: false,
           intensity: 'refine' as const,
+          enhancementMode: 'improve' as EnhancementMode,
           showSystemPrompt: false,
           customSystemPrompt: '',
         });
@@ -147,7 +155,12 @@ export function useCustomPromptForm() {
         promptText: effectivePrompt,
         category: resolvedCategory,
         intensity: formState.intensity,
+        enhancementMode: formState.enhancementMode,
         customSystemPrompt: formState.customSystemPrompt || undefined,
+        model: modelOverride.isOverridden ? modelOverride.effectiveModel : undefined,
+        thinkingLevel: modelOverride.isOverridden
+          ? modelOverride.effectiveModelEntry.thinkingLevel
+          : undefined,
       },
       {
         onSuccess: (data) => {
@@ -164,7 +177,11 @@ export function useCustomPromptForm() {
     effectivePrompt,
     resolvedCategory,
     formState.intensity,
+    formState.enhancementMode,
     formState.customSystemPrompt,
+    modelOverride.isOverridden,
+    modelOverride.effectiveModel,
+    modelOverride.effectiveModelEntry.thinkingLevel,
     enhanceMutation,
   ]);
 
@@ -289,6 +306,7 @@ export function useCustomPromptForm() {
     canEnhance,
     isSubmitting,
     enhanceMutation,
+    modelOverride,
     handleEnhance,
     handleAcceptOriginal,
     handleAcceptEnhanced,

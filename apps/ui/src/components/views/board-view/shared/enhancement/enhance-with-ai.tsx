@@ -20,7 +20,7 @@ import {
   REWRITE_MODES,
   ADDITIVE_MODES,
   isAdditiveMode,
-} from './enhancement-constants';
+} from '@/components/shared/enhancement-constants';
 import { useAppStore } from '@/store/app-store';
 
 const logger = createLogger('EnhanceWithAI');

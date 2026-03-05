@@ -8,8 +8,7 @@ const logger = createLogger('ideation:enhance-prompt');
 export function createEnhancePromptHandler(ideationService: IdeationService) {
   return async (req: Request, res: Response): Promise<void> => {
     try {
-      const { projectPath, promptText, category, intensity, contextSources, customSystemPrompt } =
-        req.body;
+      const { projectPath, promptText } = req.body;
 
       if (!projectPath) {
         res.status(400).json({ success: false, error: 'projectPath is required' });
@@ -23,14 +22,7 @@ export function createEnhancePromptHandler(ideationService: IdeationService) {
 
       logger.info('Enhancing prompt for project:', projectPath);
 
-      const result = await ideationService.enhancePrompt(
-        projectPath,
-        promptText,
-        category,
-        intensity,
-        contextSources,
-        customSystemPrompt
-      );
+      const result = await ideationService.enhancePrompt(req.body);
 
       res.json({ success: true, ...result });
     } catch (error) {

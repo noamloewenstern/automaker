@@ -385,6 +385,7 @@ export const TEMPLATE_CATEGORIES: TemplateFieldCategory[] = [
 
 export const TEMPLATE_FIELDS = TEMPLATE_CATEGORIES.flatMap((c) => c.fields);
 
+// Keep in sync with IDEATION_CATEGORIES in @automaker/prompts (libs/prompts/src/ideation-prompts.ts)
 export const CATEGORY_OPTIONS: { value: IdeaCategory; label: string }[] = [
   { value: 'feature', label: 'Features' },
   { value: 'ux-ui', label: 'UX/UI' },
@@ -395,6 +396,10 @@ export const CATEGORY_OPTIONS: { value: IdeaCategory; label: string }[] = [
   { value: 'performance', label: 'Performance' },
   { value: 'accessibility', label: 'Accessibility' },
   { value: 'analytics', label: 'Analytics' },
+  { value: 'reliability', label: 'Reliability' },
+  { value: 'devops', label: 'DevOps' },
+  { value: 'data', label: 'Data Management' },
+  { value: 'testing', label: 'Testing Strategy' },
 ];
 
 export type PromptMode = 'freetext' | 'template';
@@ -443,6 +448,10 @@ export function assembleTemplatePrompt(fields: Record<string, string>): string {
 
 // ============================================================================
 // Enhanced System Prompts
+// NOTE: These are UI-side copies shown in the "View system prompt" preview.
+// The actual prompts used by the server are in ideation-service.ts enhancePrompt().
+// The server versions additionally inject category and project context sections.
+// Keep these in sync with the server's base prompt text.
 // ============================================================================
 
 export const ENHANCE_SYSTEM_PROMPTS: Record<EnhancePromptIntensity, string> = {
@@ -451,6 +460,8 @@ export const ENHANCE_SYSTEM_PROMPTS: Record<EnhancePromptIntensity, string> = {
 <task>
 Polish and clarify the user's prompt. Improve clarity, specificity, and wording while preserving the original scope and intent.
 </task>
+
+CRITICAL: Your ENTIRE response must be ONLY the improved prompt in markdown. Do NOT output any preamble, thinking, commentary, explanations, or meta-text like "Here is...", "Let me...", or "I'll...". Start your response DIRECTLY with the prompt content.
 
 <process>
 1. Identify the core intent and scope of the prompt
@@ -475,6 +486,8 @@ Return ONLY the improved prompt in markdown. No explanations or commentary.`,
 <task>
 Expand the user's prompt into a comprehensive, well-structured specification that an AI coding agent can implement directly.
 </task>
+
+CRITICAL: Your ENTIRE response must be ONLY the expanded prompt in markdown. Do NOT output any preamble, thinking, commentary, explanations, or meta-text like "Here is...", "Let me...", or "I'll...". Start your response DIRECTLY with the prompt content.
 
 <process>
 Think step by step:
@@ -524,6 +537,8 @@ Return ONLY the expanded prompt in markdown. No explanations or commentary.`,
 <task>
 Reorganize the user's existing prompt content into a well-structured format. Do NOT add new requirements or change the scope — only improve the organization and clarity of what's already there.
 </task>
+
+CRITICAL: Your ENTIRE response must be ONLY the restructured prompt in markdown. Do NOT output any preamble, thinking, commentary, explanations, or meta-text like "Here is...", "Let me...", or "I'll...". Start your response DIRECTLY with the prompt content.
 
 <process>
 1. Read the entire prompt to understand all requirements mentioned

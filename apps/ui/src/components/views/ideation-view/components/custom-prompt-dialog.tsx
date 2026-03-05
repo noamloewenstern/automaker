@@ -34,6 +34,8 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Spinner } from '@/components/ui/spinner';
@@ -51,6 +53,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIdeationStore } from '@/store/ideation-store';
+import { ModelOverrideTrigger, type UseModelOverrideResult } from '@/components/shared';
 import { useCustomPromptForm, type CustomPromptFormState } from '../hooks/use-custom-prompt-form';
 import { TemplateFieldRenderer } from './template-field-renderer';
 import {
@@ -62,7 +65,12 @@ import {
   PROMPT_PATTERNS,
   type PromptMode,
 } from '../constants';
-import type { IdeaCategory, EnhancePromptIntensity } from '@automaker/types';
+import {
+  ENHANCEMENT_MODE_LABELS,
+  REWRITE_MODES,
+  ADDITIVE_MODES,
+} from '@/components/shared/enhancement-constants';
+import type { IdeaCategory, EnhancePromptIntensity, EnhancementMode } from '@automaker/types';
 
 // ============================================================================
 // Helpers
@@ -72,9 +80,9 @@ const PREVIEW_MODE_KEY = 'ideation-prompt-preview-mode';
 
 function getPreviewPreference(): boolean {
   try {
-    return localStorage.getItem(PREVIEW_MODE_KEY) === 'true';
+    return localStorage.getItem(PREVIEW_MODE_KEY) !== 'false';
   } catch {
-    return false;
+    return true;
   }
 }
 
@@ -558,6 +566,9 @@ interface EnhanceProps {
   enhanceError: Error | null;
   intensity: EnhancePromptIntensity;
   onIntensityChange: (intensity: EnhancePromptIntensity) => void;
+  enhancementMode: EnhancementMode;
+  onEnhancementModeChange: (mode: EnhancementMode) => void;
+  modelOverride: UseModelOverrideResult;
   showSystemPrompt: boolean;
   customSystemPrompt: string;
   onToggleSystemPrompt: () => void;
@@ -583,6 +594,9 @@ function EnhancePromptSection({
   enhanceError,
   intensity,
   onIntensityChange,
+  enhancementMode,
+  onEnhancementModeChange,
+  modelOverride,
   showSystemPrompt,
   customSystemPrompt,
   onToggleSystemPrompt,
@@ -601,71 +615,100 @@ function EnhancePromptSection({
 
   return (
     <>
-      {!showEnhanceComparison && (
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={onEnhance} disabled={!canEnhance} className="gap-2">
-              {enhanceIsPending ? <Spinner size="sm" /> : <Sparkles className="w-4 h-4" />}
-              Enhance Prompt
-            </Button>
-            <div className="flex rounded-md border overflow-hidden">
-              {INTENSITY_OPTIONS.map((opt) => (
-                <button
-                  key={opt.value}
-                  type="button"
-                  className={cn(
-                    'px-3 py-1.5 text-xs font-medium transition-colors',
-                    intensity === opt.value
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-background hover:bg-muted'
-                  )}
-                  onClick={() => onIntensityChange(opt.value)}
-                >
-                  {opt.label}
-                </button>
+      <div className="space-y-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" onClick={onEnhance} disabled={!canEnhance} className="gap-2">
+            {enhanceIsPending ? <Spinner size="sm" /> : <Sparkles className="w-4 h-4" />}
+            {showEnhanceComparison ? 'Enhance Again' : 'Enhance Prompt'}
+          </Button>
+          <div className="flex rounded-md border overflow-hidden">
+            {INTENSITY_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                className={cn(
+                  'px-3 py-1.5 text-xs font-medium transition-colors',
+                  intensity === opt.value
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-background hover:bg-muted'
+                )}
+                onClick={() => onIntensityChange(opt.value)}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="h-8 text-xs">
+                {ENHANCEMENT_MODE_LABELS[enhancementMode]}
+                <ChevronDown className="w-3 h-3 ml-1" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              <DropdownMenuLabel>Rewrite</DropdownMenuLabel>
+              {REWRITE_MODES.map((mode) => (
+                <DropdownMenuItem key={mode} onClick={() => onEnhancementModeChange(mode)}>
+                  {ENHANCEMENT_MODE_LABELS[mode]}
+                </DropdownMenuItem>
               ))}
-            </div>
-          </div>
-          {enhanceIsPending && (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 p-3 rounded-md bg-muted/50 border">
-                <Spinner size="sm" />
-                <span className="text-sm text-muted-foreground">Enhancing your prompt...</span>
-              </div>
-              <div className="p-3 rounded-md bg-muted text-sm text-muted-foreground whitespace-pre-wrap">
-                <span className="font-medium text-foreground">Sent: </span>
-                {effectivePrompt}
-              </div>
-            </div>
-          )}
-          {enhanceError && (
-            <p className="text-xs text-destructive">Failed to enhance: {enhanceError.message}</p>
-          )}
-          <div className="space-y-2">
-            <button
-              type="button"
-              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-              onClick={onToggleSystemPrompt}
-            >
-              {showSystemPrompt ? (
-                <ChevronUp className="w-3 h-3" />
-              ) : (
-                <ChevronDown className="w-3 h-3" />
-              )}
-              View system prompt
-            </button>
-            {showSystemPrompt && (
-              <Textarea
-                value={customSystemPrompt || ENHANCE_SYSTEM_PROMPTS[intensity]}
-                onChange={(e) => onSystemPromptChange(e.target.value)}
-                rows={6}
-                className="text-xs font-mono resize-y"
-                placeholder="System prompt for enhancement..."
-              />
-            )}
-          </div>
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel>Append Details</DropdownMenuLabel>
+              {ADDITIVE_MODES.map((mode) => (
+                <DropdownMenuItem key={mode} onClick={() => onEnhancementModeChange(mode)}>
+                  {ENHANCEMENT_MODE_LABELS[mode]}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <ModelOverrideTrigger
+            currentModelEntry={modelOverride.effectiveModelEntry}
+            onModelChange={modelOverride.setOverride}
+            phase="ideationModel"
+            isOverridden={modelOverride.isOverridden}
+            size="sm"
+            variant="icon"
+          />
         </div>
-      )}
+        {enhanceIsPending && (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 p-3 rounded-md bg-muted/50 border">
+              <Spinner size="sm" />
+              <span className="text-sm text-muted-foreground">Enhancing your prompt...</span>
+            </div>
+            <div className="p-3 rounded-md bg-muted text-sm text-muted-foreground whitespace-pre-wrap">
+              <span className="font-medium text-foreground">Sent: </span>
+              {effectivePrompt}
+            </div>
+          </div>
+        )}
+        {enhanceError && (
+          <p className="text-xs text-destructive">Failed to enhance: {enhanceError.message}</p>
+        )}
+        <div className="space-y-2">
+          <button
+            type="button"
+            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            onClick={onToggleSystemPrompt}
+          >
+            {showSystemPrompt ? (
+              <ChevronUp className="w-3 h-3" />
+            ) : (
+              <ChevronDown className="w-3 h-3" />
+            )}
+            View system prompt
+          </button>
+          {showSystemPrompt && (
+            <Textarea
+              value={customSystemPrompt || ENHANCE_SYSTEM_PROMPTS[intensity]}
+              onChange={(e) => onSystemPromptChange(e.target.value)}
+              rows={6}
+              className="text-xs font-mono resize-y"
+              placeholder="System prompt for enhancement..."
+            />
+          )}
+        </div>
+      </div>
 
       {showEnhanceComparison && enhancedPrompt && (
         <div className="space-y-3">
@@ -799,6 +842,11 @@ export function CustomPromptDialog() {
             enhanceError={form.enhanceMutation.error}
             intensity={form.formState.intensity}
             onIntensityChange={(intensity) => form.setFormState((prev) => ({ ...prev, intensity }))}
+            enhancementMode={form.formState.enhancementMode}
+            onEnhancementModeChange={(enhancementMode) =>
+              form.setFormState((prev) => ({ ...prev, enhancementMode }))
+            }
+            modelOverride={form.modelOverride}
             showSystemPrompt={form.formState.showSystemPrompt}
             customSystemPrompt={form.formState.customSystemPrompt}
             onToggleSystemPrompt={() =>

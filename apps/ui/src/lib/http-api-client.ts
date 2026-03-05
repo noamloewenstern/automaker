@@ -48,7 +48,13 @@ import type {
   ZaiUsageResponse,
 } from '@/store/app-store';
 import type { WorktreeAPI, GitAPI, ModelDefinition, ProviderStatus } from '@/types/electron';
-import type { ModelId, ThinkingLevel, ReasoningEffort, Feature } from '@automaker/types';
+import type {
+  ModelId,
+  ThinkingLevel,
+  ReasoningEffort,
+  Feature,
+  EnhancePromptOptions,
+} from '@automaker/types';
 import { getGlobalFileBrowser } from '@/contexts/file-browser-context';
 
 const logger = createLogger('HttpClient');
@@ -3115,22 +3121,8 @@ export class HttpApiClient implements ElectronAPI {
         customPromptText,
       }),
 
-    enhancePrompt: (
-      projectPath: string,
-      promptText: string,
-      category?: IdeaCategory,
-      intensity?: 'refine' | 'expand' | 'structure',
-      contextSources?: IdeationContextSources,
-      customSystemPrompt?: string
-    ) =>
-      this.post('/api/ideation/enhance-prompt', {
-        projectPath,
-        promptText,
-        category,
-        intensity,
-        contextSources,
-        customSystemPrompt,
-      }),
+    enhancePrompt: (options: EnhancePromptOptions) =>
+      this.post('/api/ideation/enhance-prompt', options),
 
     listCustomPrompts: (projectPath: string) =>
       this.post('/api/ideation/custom-prompts/list', { projectPath }),

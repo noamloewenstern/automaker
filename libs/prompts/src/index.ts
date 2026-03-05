@@ -80,6 +80,14 @@ export {
   DEFAULT_PROMPTS,
 } from './defaults.js';
 
+// Ideation prompt data
+export {
+  IDEATION_PROMPTS,
+  IDEATION_CATEGORIES,
+  IDEATION_CATEGORY_DESCRIPTIONS,
+  IDEATION_CATEGORY_TYPE_MAPPING,
+} from './ideation-prompts.js';
+
 // Prompt merging utilities
 export {
   mergeAutoModePrompts,

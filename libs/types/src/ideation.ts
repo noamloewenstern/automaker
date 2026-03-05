@@ -15,7 +15,11 @@ export type IdeaCategory =
   | 'security'
   | 'performance'
   | 'accessibility'
-  | 'analytics';
+  | 'analytics'
+  | 'reliability'
+  | 'devops'
+  | 'data'
+  | 'testing';
 export type IdeaStatus = 'raw' | 'refined' | 'ready' | 'archived';
 export type ImpactLevel = 'low' | 'medium' | 'high';
 export type EffortLevel = 'low' | 'medium' | 'high';
@@ -139,6 +143,18 @@ export interface EnhancePromptResult {
 }
 
 export type EnhancePromptIntensity = 'refine' | 'expand' | 'structure';
+
+export interface EnhancePromptOptions {
+  projectPath: string;
+  promptText: string;
+  category?: IdeaCategory;
+  intensity?: EnhancePromptIntensity;
+  contextSources?: IdeationContextSources;
+  customSystemPrompt?: string;
+  model?: string;
+  thinkingLevel?: string;
+  enhancementMode?: import('./enhancement.js').EnhancementMode;
+}
 
 // ============================================================================
 // Project Analysis
