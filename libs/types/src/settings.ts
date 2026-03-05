@@ -339,14 +339,15 @@ export function isAdaptiveThinkingModel(model: string): boolean {
 
 /**
  * Get the available thinking levels for a given model.
- * - Opus 4.6: Only 'none' and 'adaptive' (SDK handles token allocation)
- * - Others: Full range of manual thinking levels
+ * Base levels: 'none', 'low', 'medium', 'high', 'ultrathink'
+ * Opus 4.6: Also includes 'adaptive' for automatic reasoning control
  */
 export function getThinkingLevelsForModel(model: string): ThinkingLevel[] {
+  const levels: ThinkingLevel[] = ['none', 'low', 'medium', 'high', 'ultrathink'];
   if (isAdaptiveThinkingModel(model)) {
-    return ['none', 'adaptive'];
+    levels.push('adaptive');
   }
-  return ['none', 'low', 'medium', 'high', 'ultrathink'];
+  return levels;
 }
 
 /**
