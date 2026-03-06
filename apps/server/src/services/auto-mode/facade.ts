@@ -753,6 +753,12 @@ export class AutoModeServiceFacade {
         );
       }
 
+      // Force-release any stale concurrency entry — a feature in waiting_approval
+      // is not actively running, so any existing entry is leftover from a previous execution.
+      if (this.concurrencyManager.isRunning(featureId)) {
+        this.concurrencyManager.release(featureId, { force: true });
+      }
+
       // Delegate to executeFeature with the built continuation prompt
       await this.executeFeature(featureId, useWorktrees, false, undefined, {
         continuationPrompt,
