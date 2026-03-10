@@ -6,6 +6,11 @@
  * In web mode, this server runs on a remote host.
  */
 
+// IMPORTANT: instrument.ts must be the first import to ensure OpenTelemetry
+// auto-instrumentation patches are applied before any other modules load.
+import './instrument.js';
+import { shutdownTracing } from '@automaker/telemetry';
+
 import express from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
@@ -961,6 +966,9 @@ const gracefulShutdown = async (signal: string) => {
   // This ensures they can be resumed when the server restarts
   // Note: markAllRunningFeaturesInterrupted handles errors internally and never rejects
   await autoModeService.markAllRunningFeaturesInterrupted(`${signal} signal received`);
+
+  // Flush and shut down OpenTelemetry before closing the server
+  await shutdownTracing().catch(() => {});
 
   terminalService.cleanup();
   server.close(() => {

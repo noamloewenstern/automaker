@@ -3,6 +3,10 @@ import { createRoot } from 'react-dom/client';
 import App from './app';
 import { AppErrorBoundary } from './components/ui/app-error-boundary';
 import { isMobileDevice, isPwaStandalone } from './lib/mobile-detect';
+import { initWebTracing } from './lib/otel';
+
+// Initialize OpenTelemetry web tracing early, before any React API calls.
+initWebTracing();
 
 // Defensive fallback: index.html's inline script already applies data-pwa="standalone"
 // before first paint. This re-applies it in case the inline script failed (e.g.

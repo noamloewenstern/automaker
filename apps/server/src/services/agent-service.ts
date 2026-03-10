@@ -16,6 +16,7 @@ import {
   createLogger,
   classifyError,
 } from '@automaker/utils';
+import { getTracer } from '@automaker/telemetry';
 import { ProviderFactory } from '../providers/provider-factory.js';
 import { createChatOptions, validateWorkingDirectory } from '../lib/sdk-options.js';
 import type { SettingsService } from './settings-service.js';
@@ -89,6 +90,7 @@ export class AgentService {
   private events: EventEmitter;
   private settingsService: SettingsService | null = null;
   private logger = createLogger('AgentService');
+  private tracer = getTracer('agent-service');
 
   constructor(dataDir: string, events: EventEmitter, settingsService?: SettingsService) {
     this.stateDir = path.join(dataDir, 'agent-sessions');
@@ -349,6 +351,15 @@ export class AgentService {
     });
 
     await this.saveSession(sessionId, session.messages);
+
+    // Start a span for the full agent SDK invocation lifecycle
+    const agentSpan = this.tracer.startSpan('agent.sdk.run', {
+      attributes: {
+        'agent.session_id': sessionId,
+        ...(model ? { 'agent.model': model } : {}),
+        ...(workingDirectory ? { 'agent.worktree': workingDirectory } : {}),
+      },
+    });
 
     try {
       // Determine the effective working directory for context loading
@@ -783,12 +794,17 @@ export class AgentService {
       // Process next item in queue after completion
       setImmediate(() => this.processNextInQueue(sessionId));
 
+      agentSpan.setStatus({ code: 1 }); // OK
+      agentSpan.end();
+
       return {
         success: true,
         message: currentAssistantMessage,
       };
     } catch (error) {
       if (isAbortError(error)) {
+        agentSpan.setStatus({ code: 1 }); // OK - user-initiated abort
+        agentSpan.end();
         session.isRunning = false;
         session.abortController = null;
         return { success: false, aborted: true };
@@ -832,6 +848,10 @@ export class AgentService {
         error: cleanErrorMsg,
         message: errorMessage,
       });
+
+      agentSpan.setStatus({ code: 2, message: cleanErrorMsg }); // ERROR
+      agentSpan.recordException(error instanceof Error ? error : new Error(cleanErrorMsg));
+      agentSpan.end();
 
       throw error;
     }
