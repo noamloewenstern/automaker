@@ -24,6 +24,7 @@ interface BoardHeaderProps {
   maxConcurrency: number;
   runningAgentsCount: number;
   onConcurrencyChange: (value: number) => void;
+  onConcurrencyCommit: (value: number) => void;
   isAutoModeRunning: boolean;
   onAutoModeToggle: (enabled: boolean) => void;
   onOpenPlanDialog: () => void;
@@ -52,6 +53,7 @@ export function BoardHeader({
   maxConcurrency,
   runningAgentsCount,
   onConcurrencyChange,
+  onConcurrencyCommit,
   isAutoModeRunning,
   onAutoModeToggle,
   onOpenPlanDialog,
@@ -183,6 +185,7 @@ export function BoardHeader({
             maxConcurrency={maxConcurrency}
             runningAgentsCount={runningAgentsCount}
             onConcurrencyChange={onConcurrencyChange}
+            onConcurrencyCommit={onConcurrencyCommit}
             isAutoModeRunning={isAutoModeRunning}
             onAutoModeToggle={onAutoModeToggle}
             skipVerificationInAutoMode={skipVerificationInAutoMode}
@@ -247,6 +250,7 @@ export function BoardHeader({
               maxConcurrency={maxConcurrency}
               runningAgentsCount={runningAgentsCount}
               onConcurrencyChange={onConcurrencyChange}
+              onConcurrencyCommit={onConcurrencyCommit}
             />
           </div>
         )}

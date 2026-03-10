@@ -20,6 +20,7 @@ interface HeaderMobileMenuProps {
   maxConcurrency: number;
   runningAgentsCount: number;
   onConcurrencyChange: (value: number) => void;
+  onConcurrencyCommit: (value: number) => void;
   // Auto mode
   isAutoModeRunning: boolean;
   onAutoModeToggle: (enabled: boolean) => void;
@@ -42,6 +43,7 @@ export function HeaderMobileMenu({
   maxConcurrency,
   runningAgentsCount,
   onConcurrencyChange,
+  onConcurrencyCommit,
   isAutoModeRunning,
   onAutoModeToggle,
   skipVerificationInAutoMode,
@@ -140,6 +142,7 @@ export function HeaderMobileMenu({
               <Slider
                 value={[maxConcurrency]}
                 onValueChange={(value) => onConcurrencyChange(value[0])}
+                onValueCommit={(value) => onConcurrencyCommit(value[0])}
                 min={1}
                 max={10}
                 step={1}

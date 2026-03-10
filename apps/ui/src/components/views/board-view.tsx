@@ -1853,10 +1853,13 @@ export function BoardView({ initialFeatureId, initialProjectPath }: BoardViewPro
         runningAgentsCount={runningAutoTasks.length}
         onConcurrencyChange={(newMaxConcurrency) => {
           if (currentProject) {
-            // If selectedWorktree is undefined or it's the main worktree, branchName will be null.
-            // Otherwise, use the branch name.
             const branchName = selectedWorktree?.isMain === false ? selectedWorktree.branch : null;
             setMaxConcurrencyForWorktree(currentProject.id, branchName, newMaxConcurrency);
+          }
+        }}
+        onConcurrencyCommit={(newMaxConcurrency) => {
+          if (currentProject) {
+            const branchName = selectedWorktree?.isMain === false ? selectedWorktree.branch : null;
 
             // Persist to server settings so capacity checks use the correct value
             const worktreeKey = `${currentProject.id}::${branchName ?? '__main__'}`;

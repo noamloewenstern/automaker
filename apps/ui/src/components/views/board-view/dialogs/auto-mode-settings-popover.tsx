@@ -10,6 +10,7 @@ interface AutoModeSettingsPopoverProps {
   maxConcurrency: number;
   runningAgentsCount: number;
   onConcurrencyChange: (value: number) => void;
+  onConcurrencyCommit: (value: number) => void;
 }
 
 export function AutoModeSettingsPopover({
@@ -18,6 +19,7 @@ export function AutoModeSettingsPopover({
   maxConcurrency,
   runningAgentsCount,
   onConcurrencyChange,
+  onConcurrencyCommit,
 }: AutoModeSettingsPopoverProps) {
   return (
     <Popover>
@@ -52,6 +54,7 @@ export function AutoModeSettingsPopover({
               <Slider
                 value={[maxConcurrency]}
                 onValueChange={(value) => onConcurrencyChange(value[0])}
+                onValueCommit={(value) => onConcurrencyCommit(value[0])}
                 min={1}
                 max={10}
                 step={1}
